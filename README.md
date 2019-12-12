@@ -1,5 +1,5 @@
 ## ot2protocol
-[![Build Status](https://travis-ci.org/uwescience/ot2protocol.svg?branch=master)](https://travis-ci.org/uwescience/ot2protocol)
+[![Build Status](https://travis-ci.org/pozzo-group-robots/ot2protocol.svg?branch=master)](https://travis-ci.org/pozzo-group-robots/OT2Protocols2)
 
 Shablona is a template project for small scientific python projects. The
 recommendations we make here follow the standards and conventions of much of
@@ -8,7 +8,7 @@ will make it easier for others to use your code, and can make it easier for you
 to port your code into other projects and collaborate with other users of this
 eco-system.
 
-To use it as a template for your own project, click the green "use this template" 
+To use it as a template for your own project, click the green "use this template"
 button at the top of the front page of this repo.
 
 First, let me explain all the different moving parts that make up a small
@@ -454,8 +454,8 @@ the tests might look like.
 To use this repository as a template, click the green "use this template"
 button on the front page of the "ot2protocol" repository.
 
-In "Repository name" enter the name of your project. For example, enter 
-`smallish` here. After that, you can hit the "Create repository from template" 
+In "Repository name" enter the name of your project. For example, enter
+`smallish` here. After that, you can hit the "Create repository from template"
 button.
 
 You should then be able to clone the new repo into your machine. You will want
