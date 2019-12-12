@@ -26,7 +26,7 @@ CLASSIFIERS = ["Development Status :: 3 - Alpha",
                "Topic :: Scientific/Engineering"]
 
 # Description should be a one-liner:
-description = "ot2protocol: a template for small scientific Python projects"
+description = "ot2protocol: protocols for use with OT2 pipettors"
 # Long description will go up on the pypi page
 long_description = """
 
@@ -34,7 +34,7 @@ OT2Protocols
 ========
 OT2Protocols contains protocols and help for use with the Opentrons Pipetting
 robots. This includes a function set for experimental design, sample creations,
-calibrations, and testing. 
+calibrations, and testing.
 
 License
 =======

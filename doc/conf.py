@@ -17,7 +17,7 @@ import sys
 import os
 
 # General information about the project.
-project = 'ot2protocol'
+project = 'ot2protocols'
 copyright = '2019, Pozzo Lab Group'
 
 currentdir = os.path.abspath(os.path.dirname(__file__))
