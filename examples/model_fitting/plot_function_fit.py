@@ -1,11 +1,11 @@
 """
 ================================
-Fitting a function with shablona
+Fitting a function with ot2protocol
 ================================
 
 Shablona contains a number of tools for fitting functions to
 data. This example shows us how to load data into python, fit
-a function to our datapoints with shablona, and then plot the
+a function to our datapoints with ot2protocol, and then plot the
 result.
 
 This example is meant to demonstrate the functionality of
@@ -16,14 +16,14 @@ documents from python files.
 import os.path as op
 import numpy as np
 import matplotlib.pyplot as plt
-import shablona as sb
+import ot2protocol as sb
 plt.style.use('ggplot')
 
 ###############################################################################
 # Loading data
 # ------------
 #
-# First, we'll load some data into shablona.
+# First, we'll load some data into ot2protocol.
 data_path = op.join(sb.__path__[0], 'data')
 
 ortho_x, ortho_y, ortho_n = sb.transform_data(op.join(data_path, 'ortho.csv'))
@@ -33,7 +33,7 @@ para_x, para_y, para_n = sb.transform_data(op.join(data_path, 'para.csv'))
 # Fitting a model
 # ---------------
 #
-# With shablona, models are created with the :ref:Model class.
+# With ot2protocol, models are created with the :ref:Model class.
 # This class has a `fit` method that returns the coefficients for the given
 # input data.
 

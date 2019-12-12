@@ -1,7 +1,7 @@
 [run]
 branch = True
-source = shablona/*
-include = shablona/*
+source = ot2protocol/*
+include = ot2protocol/*
 omit = */setup.py
 [report]
-include = shablona/*
+include = ot2protocol/*

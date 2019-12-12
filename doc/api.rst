@@ -5,7 +5,7 @@ API
 Classes
 -------
 
-.. currentmodule:: shablona
+.. currentmodule:: ot2protocol
 
 .. autosummary::
    :template: class.rst
