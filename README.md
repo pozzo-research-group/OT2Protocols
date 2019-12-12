@@ -1,5 +1,5 @@
 ## ot2protocol
-[![Build Status](https://travis-ci.org/pozzo-group-robots/ot2protocol.svg?branch=master)](https://travis-ci.org/pozzo-group-robots/OT2Protocols2)
+[![Build Status](https://travis-ci.org/pozzo-group-robots/OT2protocols2.svg?branch=master)](https://travis-ci.org/pozzo-group-robots/OT2Protocols2)
 
 Shablona is a template project for small scientific python projects. The
 recommendations we make here follow the standards and conventions of much of
