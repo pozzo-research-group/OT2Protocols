@@ -29,3 +29,4 @@ class A1Stock:
         self.density = self.solvent1.density #Approximate density as density of solvent1 for now. 
     def real_init(self):
         pass
+

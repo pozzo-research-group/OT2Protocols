@@ -45,11 +45,16 @@ class OuzoSample:
         self.water_dict = {'component':self.water,
         'component_mass':self.water_mass, 'component_stock':self.water_stock, 'component_wtf':self.water_wtf}
 
+
         self.additional_water_mass = self.water_mass
         self.additional_organic_solvent_mass = self.organic_solvent_mass
         if self.hydrophobe_stock.solvent1 == self.organic_solvent:
             self.source_organic(self.hydrophobe_dict)
-        
+        else:
+            print('Hydrophobe not in organic solvent?, hydrophobe solvent = ',
+            self.hydrophobe_stock.solvent1.name, 'organic solvent = ', 
+            self.organic_solvent.name)
+
         if self.stabilizer1_stock.solvent1 == self.water:
             self.source_aq(self.stabilizer1_dict, prestock=True)
             
@@ -59,6 +64,7 @@ class OuzoSample:
         with how much water/aq stock is necessary to make sample, 
         and simultaneously track how this affects solvent volume
         '''
+        print("source_aq function called")
         component_mass = dict_to_source['component_mass']
         component_stock = dict_to_source['component_stock']
         
@@ -80,6 +86,7 @@ class OuzoSample:
         with how much organic stock is necessary to make sample, 
         and simultaneously track how this affects solvent volume
         '''
+        print("source_organic function called")
         component_mass = dict_to_source['component_mass']
         component_stock = dict_to_source['component_stock']
         
@@ -95,11 +102,11 @@ class OuzoSample:
 
     def make_aq_prestock(self, dict_for_prestock):
         #units: 
-        # prestock_volume units = uL
+        # prestock_volume units = mL
         # density = g/cm3 or g/mL
         # mass = g
 
-
+        print("make_aq_prestock function called")
         dead_prestock_weight = 0.2 #Hard coded value for making slight excess of prestock, so that air is not aspirated
 
         min_component_mass = dict_for_prestock['component_mass']
@@ -125,14 +132,21 @@ class OuzoSample:
         if additional_solvent_mass == (scaled_prestock_mass*(1.0 -prestock_component_wtf))-stock_solvent_mass:
             print("Prestock math might be ok")
         else:
-            print("Warning, additional_solvent_mass to make prestock seems off=  ", additional_solvent_mass)
-            print("(scaled_prestock_mass*(1.0 -prestock_component_wtf)-stock_solvent_mass)", (scaled_prestock_mass*(1.0 -prestock_component_wtf)-stock_solvent_mass))
-            print(prestock_component_mass/(prestock_component_mass+additional_solvent_mass))
+            print("Warning, additional_solvent_mass to make prestock seems off=  ", additional_solvent_mass,
+             "vs", (scaled_prestock_mass*(1.0 -prestock_component_wtf)-stock_solvent_mass))
         #Again, wherever we see a density call we could substitute this with something smarter, like a reference to data table of density vs. weight fraction 
-        prestock_volume = min_prestock_mass/self.water.density*1000 
+        prestock_volume = min_prestock_mass/self.water.density
 
         aq_prestock = {'prestock_component_mass':prestock_component_mass, 'prestock_component_wtf':prestock_component_wtf, 
         'total_stock_mass':total_stock_mass, 'stock_solvent_mass':stock_solvent_mass, 'additional_solvent_mass':additional_solvent_mass,
         'prestock_volume':prestock_volume, 'additional_solvent_volume':additional_solvent_volume, 'total_stock_volume':total_stock_volume}
         
         return aq_prestock
+    def examine_dicts(self):
+        master_dict = {'hydrophobe_dict':self.hydrophobe_dict, 'organic_solvent_dict':self.organic_solvent_dict , 
+        'stabilizer1_dict':self.stabilizer1_dict, 'water_dict':self.water_dict} 
+        for key1 in master_dict:
+            print(key1)
+            for key2 in master_dict[key1]:
+                print('\t', key2)
+            print('\n')
