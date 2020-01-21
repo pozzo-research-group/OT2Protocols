@@ -31,26 +31,28 @@ class A1Stock:
     
     def wtf_to_volf(self):
         try:
-            print(self.componentA.density)
+            (self.componentA.density)
         except AttributeError:
             print(self.componentA.name, " has no density.")
         try:
-            print(self.solvent1.density)
+            (self.solvent1.density)
         except AttributeError:
             print(self.solvent1.name, " has no density.")    
         self.componentA_volf = (self.componentA_wtf/self.componentA.density)/((self.componentA_wtf/self.componentA.density) + (self.solvent1_wtf/self.solvent1.density))
         self.solvent1_volf = 1.0 - self.componentA_volf
     
     def wtf_to_molarity(self):
-        componentA_moles = self.componentA_wtf/self.componentA.mw
-
+        placeholder_mass = 1.0
+        componentA_moles = self.componentA_wtf*placeholder_mass/self.componentA.mw
+        
         try:
-            print(self.solvent1.density)
+            (self.solvent1.density)
         except AttributeError:
             print(self.solvent1.name, " has no density.")   
-        solvent1_placeholder_volume = self.solvent1_wtf/self.solvent1.density
+        solvent1_placeholder_volume = placeholder_mass*self.solvent1_wtf/self.solvent1.density
         
         self.componentA_molarity = componentA_moles*solvent1_placeholder_volume/1000
+        print("From A1stock componentA_molarity = ", self.componentA_molarity)
 
     def real_init(self):
         pass
