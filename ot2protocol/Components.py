@@ -4,7 +4,7 @@
 
 class Component:
     """Initialize your components to make calling of chemical properties easier"""
-    def __init__(self,mw, density = 1, name = 'unnamed'):
+    def __init__(self,mw, density = None, name = 'unnamed'):
 #         Initialize properties of component. If density is unknown will default to 1 g/mL
         self.mw =float(mw)#component molecular weight (g/mol)
         self.density = float(density) #component density at 298.15 K, in g/mL
