@@ -1,5 +1,5 @@
 ## ot2protocol
-[![Build Status](https://travis-ci.com/pozzo-group-robots/OT2protocols2.svg?branch=master)](https://travis-ci.com/pozzo-group-robots/OT2Protocols2)
+[![Build Status](https://travis-ci.com/pozzo-group-robots/OT2Protocols.svg?branch=master)](https://travis-ci.com/pozzo-group-robots/OT2Protocols)
 
 # OT2 Protocols
 OT2Protocols contains protocols and help for use with the Opentrons Pipetting
