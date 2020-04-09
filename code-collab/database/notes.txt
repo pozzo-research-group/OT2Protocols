@@ -1,0 +1,4 @@
+•	Storing metadata for property values from chemicals (i.e, what temperature the density value was reported at, what solvent is used for solubility value).
+•	Addressing instances when certain properties aren’t found from the ideal source (i.e. density not in pubchem) and needs to be taken from other sources. 
+
+
