@@ -1,4 +1,16 @@
 •	Storing metadata for property values from chemicals (i.e, what temperature the density value was reported at, what solvent is used for solubility value).
 •	Addressing instances when certain properties aren’t found from the ideal source (i.e. density not in pubchem) and needs to be taken from other sources. 
 
+2020/04/09
+KJL, JR
+Wrote function "get_stock_dfs" to import stock_specification.csv. 
+The idea is that the stock_specification contains some nominal values for what stocks will be used in the experiment including: name of stock (in place of enumerating stock we can use a string), maximum concentration of each component in the stock, chemical shorthand name, role in experiment.  
 
+get_stock_dfs outputs a dictionary with {stock-name:dataframe...}. Started making another csv which will be used to specify how to perform the experiment, i.e. order of addition of stocks, and what concentrations to try. One can specify a sampling method (explicity, random in range... etc.) 
+
+To do: write a function that parses second csv, and interacts with the first csv. The purpose here is to check whether the maximum concentration of stocks will satisfy the experimental rang. If so, the function will make a "suggested concentration" column in the stock_specification.csv, but the user will be able to update the csv with actual experimental values. 
+
+THEN this will be read back in, checked whether it can still make all samples, and calculate pipetting volumes.
+
+NOTE: 
+Instead of updating the stock_specification.csv we can create a new one.  
