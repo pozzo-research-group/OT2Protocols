@@ -1,12 +1,12 @@
-Stock name,hba-stock,,,
-Role,Chemical Abbreviation,Maximum Concentration,Units,Process
-component,NaCl,5,M,
-component,Butenedioicacid,1,M,
-solvent,Water,,,
-Stock name,hbd-stock,,,
-Role,Chemical Abbreviation,Maximum Concentration,Units,
-component,chcl,5,M,
-solvent,Water,,,
-Stock name,Water,,,
-Role,Chemical Abbreviation,Maximum Concentration,Units,
-component,Water,,,
+Stock name,hba-stock,,,,,
+State,Chemical Abbreviation,Order,Maximum Concentration,Stock 1 Nominal Concentration,Stock 1 Experimental Concentration,Concentration Units
+solid,NaCl,primary,5,3,,M
+solid,Butenedioicacid,primary,1,1,,M
+liquid,Water,secondary,,,,volume fraction
+Stock name,hbd-stock,,,,,
+State,Chemical Abbreviation,,Maximum Concentration,Stock 1 Nominal Concentration,Stock 1 Experimental Concentration,Concentration Units
+solid,chcl,primary,5,3,,M
+liquid,Water,secondary,,,,volume fraction
+Stock name,Water,,,,,
+State,Chemical Abbreviation,,Maximum Concentration,Stock 1 Nominal Concentration,Stock 1 Experimental Concentration,Concentration Units
+liquid,Water,pimary,,1,,volume fraction
