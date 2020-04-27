@@ -40,3 +40,11 @@ should indeed stick to one primary component per stock. What I mean by primary
 is that only one component's concentration quota has to be fulfilled using the
 stock, and the remaining component quota is simply tallied. This is what is done
 in principle whenever we calculate how much additional water to add at the end.
+
+2020/04/27 Group meeting notes: Maria - did not find example of database using
+google drive and python. Sage - please push code Edwin - used module called
+fuzzywuzzy to parse raw data from DLS and save in an HDF5 file. Kacper - should
+try refactoring code to incorporate mixture constraint, correctly calculate
+volume fractions, and don't over-specify. Anyone - look into how to make our
+github organization take advantage of additional permissions granted to
+educational organizations like ourselves.  
