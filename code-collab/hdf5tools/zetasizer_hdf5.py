@@ -1,7 +1,7 @@
 import numpy as np
 import os
 import glob
-import h5py # huge issue with this fucking up execution
+import h5py 
 import pandas as pd
 import csv
 from fuzzywuzzy import fuzz
