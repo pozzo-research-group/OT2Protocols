@@ -1,7 +1,7 @@
 import numpy as np
 import os
 import glob
-import h5py 
+import h5py
 import pandas as pd
 import csv
 from fuzzywuzzy import fuzz
@@ -14,6 +14,19 @@ from fuzzywuzzy import process
 
 # would want multiple file processing
 
+# Suggestions:
+# 1. New work flow suggestion. First prompt user where to navigate to , i.e., 
+# what directory do they want to look at. 
+# Print all the .txt files in the folder, then user inputs name of the file
+# that they want to transform into an hdf5.
+# 2. New name should just be the same name as the .txt file, with new extension.
+# 3. Let's have discussion on what is metadata, and how to handle it. 
+# there are things that we have considered implicit, which are not, and we should
+# discuss. 
+# 4. Restructure this code - consider splitting it into two separate files 
+# if necessary. You should not have input prompts scattered between function
+# definitions.
+
 # step 1: find zetasizer file path FI:other file types other than txt
 
 abspath = os.path.abspath(__file__) # script abs path
@@ -23,12 +36,12 @@ data_path = glob.glob('./*.txt') # print list of relative paths of .txt files # 
 
 # step 2: initialze hdf5 file (L: any specfic user options?) (and folder?? difficult as trial name does not exist yet, but can do metadata one)
 
-file_name_0 = input("Enter File Name")
-file_name = file_name_0 + str('.hdf5')
-experiment_id = input ("Enter unique experiment ID")
+input_filename = input("Enter name of new filename \n")
+file_name = input_filename + str('.hdf5')
+experiment_id = input("Enter unique experiment ID \n")
 
 print(file_name, experiment_id) # add input are these correct?
-checker = input('Is this correct? y/n?')
+checker = input('Is this correct? y/n? \n')
 
 if checker == 'y':
     pass
@@ -40,7 +53,7 @@ root_file = h5py.File(name = file_name)
 # step 3: Add unique ID to metadata of root group (file) (UO: unique experiment ID)
 
 root_file.attrs['expid'] = experiment_id
-num_root_attr = int(input('Would you like to add MTD to file? Specify Number'))
+num_root_attr = int(input('Would you like to add metadata to file? Specify Number'))
 if num_root_attr>0:
     for i in range(num_root_attr):
         root_attr_name = input('name')
@@ -153,7 +166,7 @@ for i,data_pair in enumerate(datag):
         group.create_dataset(name=k,data=v)
         print('saving dataset'+k)
 
-input('double tap enter to close')
+input('tap enter to close')
 
 root_file.close()
 
