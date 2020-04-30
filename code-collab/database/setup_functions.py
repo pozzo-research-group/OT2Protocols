@@ -64,7 +64,19 @@ def get_min_volume(plan_dict):
     min_volume = min(left_min, right_min)
 
 
-def generate_candidate_samples(plan_dict):
+def get_component_info(plan_dict, chemical_db_df):
+    """
+    Given a plan_dict which contains the names of components that each sample
+    will consist of, return a dataframe of just those entries from the
+    chemical_inventory.
+    """
+    component_list = plan_dict['Component names']
+    selection = chemical_db_df['Chemical Abbreviation'].isin(component_list)
+    component_df = chemical_db_df[selection]
+    return component_df
+
+
+def generate_candidate_samples(plan_dict, chemical_db_df):
     """
     Given a experimental plan dictionary loaded from .csv,
     create a linspace array for every entry and
@@ -72,9 +84,9 @@ def generate_candidate_samples(plan_dict):
     This will get fed to another function which removes impossible samples
     based on some criteria.
     """
+    component_df = get_component_info(plan_dict, chemical_db_df)
     component_list = plan_dict['Component names']
     component_concs_list = plan_dict['Concentration linspace [min, max, n]']
-    assert len(component_list) == len(component_concs_list)
     component_conc_dict = {}
     conc_range_list = []
     for conc_range in component_concs_list:
