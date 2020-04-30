@@ -1,3 +1,2 @@
-import requests
+# import requests
 import pubchempy
-
