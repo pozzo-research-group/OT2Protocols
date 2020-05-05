@@ -118,76 +118,67 @@ def generate_candidate_samples(plan_dict, chemical_db_df):
         # Obtaining volume fractions of all components in sample to determine
         # missing volume fraction.
         concentration_array = concentration_df.values
-        conc_man_array = np.empty(shape=(concentration_array.shape),
-                                  dtype=object)
-        for i in range(len(concentration_array)):
-            conc_vector = concentration_array[:, i]
-
+        volf_array = np.empty(shape=(concentration_array.shape[0],
+                                     concentration_array.shape[1]+1))
+        for i, component in enumerate(component_list):
+            component_df = component_df_list[i]
             conc_type = component_conc_type_list[i]
-            # conc_type_vector = np.empty(shape=(concentration_array.shape[0]),
-            #                             dtype=object)
-            # conc_type_vector[:] = conc_type
-
-            comp_df = component_df_list[i]
-            # comp_df_vector = np.empty(shape=(concentration_array.shape[0]),
-            #                           dtype=object)
-            # comp_df_vector[:] = comp_df
-
-            conc_man_array[:, i] = ConcentrationManager(conc_vector,
-                                                        conc_type,
-                                                        comp_df)
-    return concentration_df
+            if i != len(component_list)-1:
+                concentration_vector = concentration_array[:, i]
+                # All specified components case
+                volf_array[:, i] = concconvert(concentration_vector, conc_type,
+                                               component_df, 'volf')
+            else:
+                volf_array[:, i] = 1.0 - np.sum(volf_array[:, :i], axis=1)
+                # volf_array[i] = volf_array[]
+                # Last component case
+        # print(volf_array)
+    return volf_array
 
 
-class ConcentrationManager:
+def concconvert(concentration_value, concentration_type,
+                component_df, output_concentration):
     """
-    The purpose of this class is to take the concentration value used to
-    originally specify the sample, and convert it into an interoperable unit
-    format.
+    Wrapper function for converting units.
+    Unit definition clarification:
+    density - g/mL
+    molarity - moles/liter
     """
+    def molarity_f():
+        molarity = concentration_value
+        mgpermL = molarity*component_mw
+        volf = mgpermL/(component_density*1000)
+        return molarity, mgpermL, volf
 
-    def __init__(self, concentration_value, concentration_type, component_df):
-        """
-        Upon initialization, assign all known information into the
-        component_df. Then, use unit_cases_dict to manage unit conversion
-        scenarios and generate all possible methods of expressing sample
-        concentrations.
+    def volf_f():
+        volf = concentration_value
+        mgpermL = volf*component_density*1000
+        molarity = mgpermL/component_mw
+        return molarity, mgpermL, volf
 
-        Unit definition clarification:
-        density - g/mL
-        molarity - moles/liter
-        """
-        print(len(concentration_value))
-        self.component_df = component_df
-        self.component_mw = self.component_df['Molecular Weight (g/mol)']
-        self.component_density = self.component_df['Density (g/mL)'].values
-        # There are cases where approximating the component_density as 1.0 g/mL
-        # is not a good idea. Is 1.0 chosen because water is a common solvent,
-        # or ____?
-        if self.component_density == np.nan:
-            self.component_density = 1.0
+    def mgpermL_f():
+        mgpermL = concentration_value
+        volf = mgpermL/(component_density*1000)
+        molarity = mgpermL/component_mw
+        return molarity, mgpermL, volf
 
-        unit_cases_dict = {
-            "molarity": self.molarity(concentration_value),
-            "volf": self.volf(concentration_value),
-            "mgpermL": self.mgpermL(concentration_value)
-        }
-        # "massf": self.massf(concentration_value),
+    component_mw = component_df['Molecular Weight (g/mol)'].values[0]
+    component_density = component_df['Density (g/mL)'].values[0]
 
-        # Next, convert current units to all other units.
-        unit_cases_dict[concentration_type]
+    # There are cases where approximating the component_density as 1.0 g/mL
+    # is not a good idea. Is 1.0 chosen because water is a common solvent,
+    # or ____?
+    if np.isnan(component_density):
+        component_density = 1.0
 
-    def molarity(self, concentration_value):
-        self.molarity = concentration_value
-        self.mgpermL = self.molarity*self.component_mw
-        self.volf = self.mgpermL/(self.component_density*1000)
+    unit_cases_dict = {
+        "molarity": molarity_f,
+        "volf": volf_f,
+        "mgpermL": mgpermL_f
+    }
 
-    def volf(self, concentration_value):
-        self.volf = concentration_value
-        self.mgperml = self.volf*self.component_density*1000
-        self.molarity = self.mgpermL/self.component_mw
+    selected_function = unit_cases_dict[concentration_type]
+    molarity, mgpermL, volf = selected_function()
+    output_dict = {"volf": volf, "molarity": molarity, "mgpermL": mgpermL}
 
-    def mgpermL(self, concentration_value):
-        self.mgpermL = concentration_value
-        self.volf = self.mgpermL/(self.component_density*1000)
-        self.molarity = self.mgpermL/self.component_mw
+    return output_dict[output_concentration]
