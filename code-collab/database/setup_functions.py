@@ -132,8 +132,7 @@ def generate_candidate_samples(plan_dict, chemical_db_df):
                 volf_array[:, i] = 1.0 - np.sum(volf_array[:, :i], axis=1)
                 # volf_array[i] = volf_array[]
                 # Last component case
-        # print(volf_array)
-    return volf_array
+    return volf_array, concentration_array
 
 
 def concconvert(concentration_value, concentration_type,
