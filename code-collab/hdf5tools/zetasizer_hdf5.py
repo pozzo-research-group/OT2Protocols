@@ -4,7 +4,7 @@ import glob
 import h5py
 import pandas as pd
 import csv
-from fuzzywuzzy import fuzz
+from fuzzywuzzy import fuzz # make sure to install python-levenstheil
 from fuzzywuzzy import process
 
 # UO = user option
@@ -12,54 +12,84 @@ from fuzzywuzzy import process
 # IE = issues or errors
 # NT = note/noteworthy
 
-# would want multiple file processing
+# would want multiple file processing?? no make user go through each or give the option of processing all. 
+
+
 
 # Suggestions:
-# 1. New work flow suggestion. First prompt user where to navigate to , i.e., 
-# what directory do they want to look at. 
-# Print all the .txt files in the folder, then user inputs name of the file
-# that they want to transform into an hdf5.
-# 2. New name should just be the same name as the .txt file, with new extension.
+
 # 3. Let's have discussion on what is metadata, and how to handle it. 
 # there are things that we have considered implicit, which are not, and we should
 # discuss. 
 # 4. Restructure this code - consider splitting it into two separate files 
 # if necessary. You should not have input prompts scattered between function
 # definitions.
+# 5. Disntguish on what metadata and the amount that you can pull from zetasizer, may require you to hard code the metadata extracters as 
+# string searching will not be able to distinguish and once these are coded for you would need to provide the user with a manual on which are coded and how to add more. 
 
-# step 1: find zetasizer file path FI:other file types other than txt
 
-abspath = os.path.abspath(__file__) # script abs path
-dname = os.path.dirname(abspath) # dir based on script abs path 
-os.chdir(dname) 
-data_path = glob.glob('./*.txt') # print list of relative paths of .txt files # referencing in same working dir = ./name.extension (./ relative path to cwd) 
+def create_file(): # Prompts user to specifcy working directory containing appropiate txt files and intializes+returns hdf5 file
+    dir_name = input('Enter full path of working directory (no quotes) \n')
 
-# step 2: initialze hdf5 file (L: any specfic user options?) (and folder?? difficult as trial name does not exist yet, but can do metadata one)
+    if os.path.exists(dir_name) is False:
+        print('Provided path does not exist') # change these to ValueError?
+        raise SystemExit(0)
+        if os.path.isdir(dir_name) is False:
+            print('Provided path is not a directory, potentially a file path')
+            raise SystemExit(0)
 
-input_filename = input("Enter name of new filename \n")
-file_name = input_filename + str('.hdf5')
-experiment_id = input("Enter unique experiment ID \n")
+    os.chdir(dir_name) 
+    r_file_paths = glob.glob('./*.txt') # list of relative paths of .txt files # referencing in same working dir = ./name.extension (./ relative path to cwd) 
+    print()
+    print('The following .txt files were found')
+    for i,file_path in enumerate(r_file_paths):
+        print(i, file_path)
 
-print(file_name, experiment_id) # add input are these correct?
-checker = input('Is this correct? y/n? \n')
+    print()
+    working_file_input = int(input("Select the appropiate file, Provide corresponding number \n")) 
+    working_file = r_file_paths[working_file_input]
+    hdf5_file_name = os.path.splitext(working_file)[0] + str('.hdf5') #.splitext makes a tuple = (path w/out ext, .ext)
 
-if checker == 'y':
-    pass
-else:
-    raise SystemExit(0)
+    print(hdf5_file_name)
+    checker = input('Is this correct? y/n? \n')
 
-root_file = h5py.File(name = file_name)
+    if checker == 'y':
+        pass
+    else:
+        raise SystemExit(0)
+    
+    try:
+        hdf5_file = h5py.File(name = hdf5_file_name, mode = 'w-') # change file to just file, how do I supress built in error and show custom
+    except Exception as ex: # issue although I know it is an OSError when trying to overwrite, but for some reason when use OSError class none of its methods say an error is present.
+        template = "An exception of type {0} occurred. Arguments:\n{1!r}" # currently generalized to show the user what class of Error
+        message = template.format(type(ex).__name__, ex.args)
+        print(message)
+        raise ex # brings up original exception, stopping execution
+    return hdf5_file
 
-# step 3: Add unique ID to metadata of root group (file) (UO: unique experiment ID)
 
-root_file.attrs['expid'] = experiment_id
-num_root_attr = int(input('Would you like to add metadata to file? Specify Number'))
-if num_root_attr>0:
-    for i in range(num_root_attr):
-        root_attr_name = input('name')
-        root_attr_value = input('value') # will always be string give people the option of flt or int
-        root_file.attrs[root_attr_name] = root_attr_value
+def add_attr(hdf5_file): # Function(s) to add attributes (metadata) to specfic file/groups or other (UO: unique experiment ID), cannot pass hdf5 fil
+    print(hdf5_file)
+    input()
+    experiment_id = input("Enter unique experiment ID \n")
+    hdf5_file.attrs['expid'] = experiment_id
 
+    num_root_attr = int(input('Would you like to add other attributes (aka metadata) to file? Specify Number'))
+    
+    if num_root_attr>0:
+        for i in range(num_root_attr):
+            root_attr_name = input('name')
+            root_attr_value = input('value') # will always be string give people the option of flt or int
+            hdf5_file.attrs[root_attr_name] = root_attr_value
+
+print('hello')
+test_file = create_file()
+print(test_file)
+input('about')
+add_attr(test_file)
+input('break')  
+
+###################STOPPED WORK#########################
 
 # step 4: Add any special UO for oragnizing the file (i.e. # group trials, logic would break if implement robust naming system sample_1_trial#.) - semioptional
 # RIGHT NOW ONLY FOR ONE FILE
@@ -159,7 +189,7 @@ for i,data_pair in enumerate(datag):
             pass
 
     #print(len(v_u),len(k_u2)) here could convert to dictionaryt toi have it look for the sample name
-    group = root_file.create_group(name = v_u[0])
+    group = file.create_group(name = v_u[0])
     print('saving group'+v_u[0])
 
     for k,v in zip(k_u2,v_enc):
@@ -168,7 +198,7 @@ for i,data_pair in enumerate(datag):
 
 input('tap enter to close')
 
-root_file.close()
+file.close()
 
 
 
