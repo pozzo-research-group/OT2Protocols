@@ -52,3 +52,11 @@ educational organizations like ourselves.
 2020/05/04 KJL - generate_candidate_samples() may need to be renamed, or needs
 to be refactored so that it can work for either lattice or randomly generated
 samples.
+
+2020/05/11 KJL - Need to provide Hannah with an example experiment to perform.
+Do not overspecify so that Hannah can somehow optimize the process. Three
+files: 
+1. stock list first guess by user. Initial guess, e.g. most concentrated
+stock that you would prepare. 
+2. samples which satisfy mixture constraint
+3. available labware (pipette types, etc.)
