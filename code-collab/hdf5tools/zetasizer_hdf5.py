@@ -2,9 +2,8 @@ import numpy as np
 import os
 import glob
 import h5py
-import pandas as pd
 import csv
-from fuzzywuzzy import fuzz # make sure to install python-levenstheil
+from fuzzywuzzy import fuzz # make sure to install python-levenshtein (prevent error warning)
 from fuzzywuzzy import process
 
 # UO = user option
@@ -12,43 +11,40 @@ from fuzzywuzzy import process
 # IE = issues or errors
 # NT = note/noteworthy
 
-# would want multiple file processing?? no make user go through each or give the option of processing all. 
+# TO DO: 
+# Verify if SystemExist(0) is the way to go to stop execution.
+# Figure out issue with OSError not working with OSError methods.
+# Create documentation to exaplain fuzzy_key_pairing function. Explain "similar" key and values.  
+# Pull fuzzy_key_pairing and subgroup out of function
+# Further test and try to break write_grp_dataset
 
 
-
-# Suggestions:
-
-# 3. Let's have discussion on what is metadata, and how to handle it. 
-# there are things that we have considered implicit, which are not, and we should
-# discuss. 
-# 4. Restructure this code - consider splitting it into two separate files 
-# if necessary. You should not have input prompts scattered between function
-# definitions.
-# 5. Disntguish on what metadata and the amount that you can pull from zetasizer, may require you to hard code the metadata extracters as 
-# string searching will not be able to distinguish and once these are coded for you would need to provide the user with a manual on which are coded and how to add more. 
-
-
-def create_file(): # Prompts user to specifcy working directory containing appropiate txt files and intializes+returns hdf5 file
-    dir_name = input('Enter full path of working directory (no quotes) \n')
+def find_file_path(): # Changes cwd to based off of user input directory path and returns relative path of selected txt file.
+    dir_name = input('Enter full path of working directory (no quotes) \n') 
 
     if os.path.exists(dir_name) is False:
-        print('Provided path does not exist') # change these to ValueError?
+        print('Provided path does not exist') 
         raise SystemExit(0)
         if os.path.isdir(dir_name) is False:
-            print('Provided path is not a directory, potentially a file path')
+            print('Provided path is not a directory, potentially a file path\n')
             raise SystemExit(0)
 
-    os.chdir(dir_name) 
-    r_file_paths = glob.glob('./*.txt') # list of relative paths of .txt files # referencing in same working dir = ./name.extension (./ relative path to cwd) 
-    print()
+    os.chdir(dir_name)
+
+    r_file_paths = glob.glob('./*.txt') # list of relative paths of .txt files
     print('The following .txt files were found')
     for i,file_path in enumerate(r_file_paths):
         print(i, file_path)
+        print()
 
-    print()
-    working_file_input = int(input("Select the appropiate file, Provide corresponding number \n")) 
-    working_file = r_file_paths[working_file_input]
-    hdf5_file_name = os.path.splitext(working_file)[0] + str('.hdf5') #.splitext makes a tuple = (path w/out ext, .ext)
+
+    working_file_input = int(input("Select the appropiate file, Provide corresponding number \n")) # OR ask to type name?
+    working_file_path = r_file_paths[working_file_input] 
+    return working_file_path 
+
+
+def create_file(file_path): # Given relative txt file path intializes + returns root hdf5 file group. 
+    hdf5_file_name = os.path.splitext(file_path)[0] + str('.hdf5') #.splitext makes a tuple = (path w/out ext, .ext)
 
     print(hdf5_file_name)
     checker = input('Is this correct? y/n? \n')
@@ -57,10 +53,10 @@ def create_file(): # Prompts user to specifcy working directory containing appro
         pass
     else:
         raise SystemExit(0)
-    
+   
     try:
         hdf5_file = h5py.File(name = hdf5_file_name, mode = 'w-') # change file to just file, how do I supress built in error and show custom
-    except Exception as ex: # issue although I know it is an OSError when trying to overwrite, but for some reason when use OSError class none of its methods say an error is present.
+    except Exception as ex: # issue: although I know it is an OSError (when trying to overwrite)  for some reason when use OSError class none of its methods say an error is present.
         template = "An exception of type {0} occurred. Arguments:\n{1!r}" # currently generalized to show the user what class of Error
         message = template.format(type(ex).__name__, ex.args)
         print(message)
@@ -68,33 +64,20 @@ def create_file(): # Prompts user to specifcy working directory containing appro
     return hdf5_file
 
 
-def add_attr(hdf5_file): # Function(s) to add attributes (metadata) to specfic file/groups or other (UO: unique experiment ID), cannot pass hdf5 fil
-    print(hdf5_file)
-    input()
+def add_attr(grp_or_dataset): # Function(s) to add attributes (metadata) to specfic file/groups/database or other
     experiment_id = input("Enter unique experiment ID \n")
-    hdf5_file.attrs['expid'] = experiment_id
+    grp_or_dataset.attrs['expid'] = experiment_id
 
-    num_root_attr = int(input('Would you like to add other attributes (aka metadata) to file? Specify Number'))
+    num_root_attr = int(input('Would you like to add other attributes (aka metadata) to file? Specify Number\n'))
     
     if num_root_attr>0:
         for i in range(num_root_attr):
             root_attr_name = input('name')
             root_attr_value = input('value') # will always be string give people the option of flt or int
-            hdf5_file.attrs[root_attr_name] = root_attr_value
+            grp_or_dataset.attrs[root_attr_name] = root_attr_value
 
-print('hello')
-test_file = create_file()
-print(test_file)
-input('about')
-add_attr(test_file)
-input('break')  
 
-###################STOPPED WORK#########################
-
-# step 4: Add any special UO for oragnizing the file (i.e. # group trials, logic would break if implement robust naming system sample_1_trial#.) - semioptional
-# RIGHT NOW ONLY FOR ONE FILE
-
-def Pairs(data_pair):
+def fuzzy_key_pairing(data_pair): # Given a pair of keys and values returns ranges of indexes that allow for grouping of "similar" keys (i.e. intensity 1, intensity 2 etc..)
     keys = data_pair[0]
     values = data_pair[1]
 
@@ -104,18 +87,16 @@ def Pairs(data_pair):
     for i in range(len(keys)):
         if i == len(keys)-1:
             correct_b = fuzz.ratio(keys[i],keys[i-1])
-            correct_f = correct_b # as no way to go
+            correct_f = correct_b # as no way to go back
         elif i == 0: 
             correct_f = fuzz.ratio(keys[i],keys[i+1])
             correct_b = correct_f
         else: 
             correct_f = fuzz.ratio(keys[i],keys[i+1])
             correct_b = fuzz.ratio(keys[i],keys[i-1])
-        # here you could in real time make/check the cb cf cases, to make the stsp_i list
         correct_fl.append(correct_f)
         correct_bl.append(correct_b)
 
-    # still working with first pair
     stsp_rgs = []
 
     for y,(key,cb,cf) in enumerate(zip(keys,correct_bl,correct_fl)):
@@ -130,8 +111,8 @@ def Pairs(data_pair):
     return stsp_rgs_grpd
     
 
-def back_itup(listy, ranges):
-    for i,r in enumerate(reversed(ranges)): # go backwards bitch
+def subgroup(listy, ranges): # given list and ranges will group into a list w/ range of corr. values and replace. ex: [1,2,3,4,5,6] w/ ranges [[3,5]] => [1,2,3,[4,5,6]]
+    for i,r in enumerate(reversed(ranges)): # going backwards prevents issue of keeping track of locations once deletion occurs.
         if i == 0:
             r_min = r[0]
             r_max = len(listy)
@@ -146,174 +127,65 @@ def back_itup(listy, ranges):
             listy.insert(r_min,replacement)
     return listy
 
+def pair_kv(data_file_path): # takes input of relative txt files, opens, assumes, alternating rows of key and values, groups into sublist => [[k1,v1],[k2,v2]...]
+    with open(data_file_path, mode='r') as file: 
+        reader = csv.reader(file, delimiter=',')
+        data = [row for row in reader] 
+    paired_kv_data = [data[i:i+2] for i in range(0,len(data),2)]
+    return paired_kv_data
 
-print(data_path[0])
-input()
 
-with open(data_path[0], mode='r') as file:
-    reader = csv.reader(file, delimiter=',')
-    data = [row for row in reader] # writing to list, so sublist = each line
 
-datag = [data[i:i+2] for i in range(0,len(data),2)]
-print()
-#data_pair = datag[0] # this is where you would add the iterator
+def write_grp_dataset(paired_kv_data): # Function still buggy? Takes data pairs and using fuzzy logic matches and groups "similar" keys and values then writes into groups and datasets. 
 
-for i,data_pair in enumerate(datag):
-    k_orig = data_pair[0]
-    v_orig = data_pair[1]
+    for i,data_pair in enumerate(paired_kv_data):
+        k_orig = data_pair[0]
+        v_orig = data_pair[1]
 
-    indexer = k_orig
-    ranges = Pairs(data_pair)
+        indexer = k_orig
+        ranges = fuzzy_key_pairing(data_pair) # pull out??? 
 
-    k_u = np.asarray(back_itup(k_orig,ranges))
-    v_u = np.asarray(back_itup(v_orig,ranges))
+        k_u = np.asarray(subgroup(k_orig,ranges))
+        v_u = np.asarray(subgroup(v_orig,ranges))
 
-    v_enc = []
-    for iter in v_u:
-        if type(iter) == str:
-            v_enc.append(iter.encode("ascii", "ignore"))
-        elif type(iter) == list: 
-            asciiList = [n.encode("ascii", "ignore") for n in iter]
-            v_enc.append(asciiList)
-        else:
-            pass
+        v_enc = []
+        for iter in v_u:
+            if type(iter) == str:
+                v_enc.append(iter.encode("ascii", "ignore"))
+            elif type(iter) == list: 
+                asciiList = [n.encode("ascii", "ignore") for n in iter]
+                v_enc.append(asciiList)
+            else:
+                pass
 
 
-    k_u2 = []
-    for iter in k_u:
-        if type(iter) == str:
-            k_u2.append(iter)
-        elif type(iter) == list:
-            k_u2.append(iter[0])
-        else:
-            pass
+        k_u2 = []
+        for iter in k_u:
+            if type(iter) == str:
+                k_u2.append(iter)
+            elif type(iter) == list:
+                k_u2.append(iter[0])
+            else:
+                pass
 
-    #print(len(v_u),len(k_u2)) here could convert to dictionaryt toi have it look for the sample name
-    group = file.create_group(name = v_u[0])
-    print('saving group'+v_u[0])
+        group = test_file.create_group(name = v_u[0])
+        print('saving group'+v_u[0])
 
-    for k,v in zip(k_u2,v_enc):
-        group.create_dataset(name=k,data=v)
-        print('saving dataset'+k)
+        for k,v in zip(k_u2,v_enc):
+            group.create_dataset(name=k,data=v)
+            print('saving dataset'+k)
 
-input('tap enter to close')
 
-file.close()
+##################################################################################################################################################
 
+path1 = find_file_path() # find relative file path
 
+test_file = create_file(path1) # intialize and return hdf5 file object here name is same as provided text file (root_groups, root group refers to the hdf5 file - explain hierarch.)
 
+test_file_add_attr = add_attr(test_file) # adds attributes based on key and value inputs by user for any group or dataset. 
 
+paired_data = pair_kv(path1)
 
+write = write_grp_dataset(paired_data) 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# step 5: take loaded txt file and select which loading environemnt (UO: delimitter type, FI: logic delimitter)
-
-
-# steps 5 -8 will be alot of for loops initially but can later convert to nice function and reference
-
-
-# decided to use pandas dataframe as already in same format when exported with headers.
-# iloc[row] of loaded data will load a sample with same indexing of headers accessed as list(dataframe)
-# if eaiser to work with the series can be converted to list(series),
-# one concern is of grouping certain spectrums - how will these be grouped, which is why probably after 
-# finding the index range of the similar things, series will need to converted to a list and have values extracted and packaged
-
-
-
-# step 6: search for column titles - a good place to initialze all hdf5 groups simulatneously - NO since need to be inside the trial and waiting for trial name - try to do this step seperatley to prevent overwtting
-# NT decided to keep all spectra information or repetivative info (i.e. int 1, int 2 w/ 1, 2 outputs) to one dataset.
-# only needs to be done once since files loaded as one text file have the REQUIRMENT OF BEING THE SAME WORKSPACE/EXPORT TEMPLETE
-
-
-# FOR EACH TRIAL - REMEMBER AT END WITH UNIQUE EXPERIMENTAL ID ANYTHING WITH THE SAME NAME EXCEPT FOR ONE TRIAL NUMBER WILL HAVE THE OPTION OF BEING GROUPED TOGETHER
-
-
-# step 7: with column titles use a EXACT searching feature to search for data corresponding to column title and store in some data structure (all seperately still) like dict or list.
-
-
-# step 8: once neatly stored, start to group SIMILAR aka data that belongs together - MOSTLY REFFERING TO SPECTRA - using a SIMILARITY search feature
-
-
-# step 9: begin to place to the grouped data into a new entry into which every data structure. optional = delete entries used to make this grouping - could be useful who knows.
-# MOST LIKELY FINAL DATA STRCUTURE WILL NEED TO 3 LEVELS DEEPS - NO NEED FOR GENERALIZING AS JUST FOR DEVELOPER. ONE FOR KEEPING TRIALS SEPERATE, ONE FOR COLUMN TITLES AND ONE FOR DATA
-
-# step 10: once this new data structure with respective keys and values is created, create trial group using the column name and respective key = TRIAL FOLDER
-
-# step 11: do step 11, but within trial folder, for each parameter. 
-
-
-# anything else????
-
-# step 12: close file
-
+test_file.close()
