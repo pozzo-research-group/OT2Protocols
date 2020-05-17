@@ -81,7 +81,7 @@ def get_component_info(plan_dict, chemical_db_df):
     return component_df_list
 
 
-def generate_candidate_samples(plan_dict, chemical_db_df):
+def generate_candidate_lattice_concentrations(plan_dict, chemical_db_df):
     """
     Given a experimental plan dictionary loaded from .csv,
     create a linspace array for every entry and
@@ -89,9 +89,9 @@ def generate_candidate_samples(plan_dict, chemical_db_df):
     This will get fed to another function which removes impossible samples
     based on some criteria.
     """
+    # Create df for each component based on position in list
     component_df_list = get_component_info(plan_dict, chemical_db_df)
     component_list = plan_dict['Component names']
-    # Create df for each component based on position in list
     component_concs_list = plan_dict['Concentration linspace [min, max, n]']
     component_conc_type_list = plan_dict['Concentration types']
     component_conc_dict = {}
@@ -111,37 +111,60 @@ def generate_candidate_samples(plan_dict, chemical_db_df):
     # of concentrations needs to make use of ConcentrationManager methods to
     # calculate unspecified volume_fraction = 1-sum(all other concentrations).
 
-    if len(component_list) == len(component_concs_list):
-        # Somehow the exact concentrations of each component were specified.
-        return concentration_df
-    else:
-        # Obtaining volume fractions of all components in sample to determine
-        # missing volume fraction.
-        concentration_array = concentration_df.values
-        volf_array = np.empty(shape=(concentration_array.shape[0],
-                                     concentration_array.shape[1]+1))
-        for i, component in enumerate(component_list):
-            component_df = component_df_list[i]
-            conc_type = component_conc_type_list[i]
-            if i != len(component_list)-1:
-                concentration_vector = concentration_array[:, i]
-                # All specified components case
-                volf_array[:, i] = concconvert(concentration_vector, conc_type,
-                                               component_df, 'volf')
-            else:
-                volf_array[:, i] = 1.0 - np.sum(volf_array[:, :i], axis=1)
-                # volf_array[i] = volf_array[]
-                # Last component case
-    return volf_array, concentration_array
+    assert len(component_list) != len(component_concs_list), "The provided" \
+        "experimental instructions are overspecified."
+
+    # Obtaining volume fractions of all components in sample to determine
+    # missing volume fraction.
+    concentration_array = concentration_df.values
+    volf_array = np.empty(shape=(concentration_array.shape[0],
+                                 concentration_array.shape[1]+1))
+
+    for i, component in enumerate(component_list):
+        # Make use of the fact that the index position in the
+        # experimentation specification is conserved between lists.
+        component_df = component_df_list[i]
+        conc_type = component_conc_type_list[i]
+        if i != len(component_list)-1:
+            concentration_vector = concentration_array[:, i]
+            # All specified components case
+            volf_array[:, i] = concconvert(concentration_vector, conc_type,
+                                           component_df, 'volf')
+        else:
+            # Last component case
+            volf_array[:, i] = 1.0 - np.sum(volf_array[:, :i], axis=1)
+            # Drop all entries where originally unspecified vol f. is < 0,
+            # i.e. the sum of the other components for this combination was
+            # impossible (> 1).
+            condition = volf_array[:, i] >= 0
+            volf_array = volf_array[condition]
+
+    molarity_array = np.empty(shape=(volf_array.shape))
+    mgpermL_array = np.empty(shape=(volf_array.shape))
+
+    for i, component in enumerate(component_list):
+        # Create complementary mgpermL and molarity arrays for each component.
+        # This can be used to further narrow down the samples that are possible
+        # to make, because we can calculate how much of a stock with some
+        # concentration is necessary to create each sample. The previously
+        # described concentration array may have heterogeneous methods of
+        # specifying the concentration. Here we will normalize them.
+        component_df = component_df_list[i]
+        molarity_array[:, i] = concconvert(volf_array[:, i], 'volf',
+                                           component_df, 'molarity')
+        mgpermL_array[:, i] = concconvert(volf_array[:, i], 'volf',
+                                          component_df, 'mgpermL')
+
+    concentration_dict = {'molarity': molarity_array, 'volf': volf_array,
+                          'mgpermL': mgpermL_array}
+    return concentration_dict
 
 
-def concconvert(concentration_value, concentration_type,
+def concconvert(concentration_value, input_concentration,
                 component_df, output_concentration):
     """
-    Wrapper function for converting units.
-    Unit definition clarification:
-    density - g/mL
-    molarity - moles/liter
+    Wrapper function for converting units. Unit definition clarification:
+    density - g/mL molarity - moles/liter
     """
     def molarity_f():
         molarity = concentration_value
@@ -176,8 +199,19 @@ def concconvert(concentration_value, concentration_type,
         "mgpermL": mgpermL_f
     }
 
-    selected_function = unit_cases_dict[concentration_type]
+    selected_function = unit_cases_dict[input_concentration]
     molarity, mgpermL, volf = selected_function()
     output_dict = {"volf": volf, "molarity": molarity, "mgpermL": mgpermL}
 
     return output_dict[output_concentration]
+
+
+def get_extensive(concentration_dict, plan_dict, chemical_db_df):
+    """
+    Given arrays of concentrations, experimental plan containing component
+    names, and a pandas dataframe containing component information (MW,
+    density) - calculate moles, grams, and mL for each component in a given
+    sample.
+    """
+    component_df_list = get_component_info(plan_dict, chemical_db_df)
+    component_list = plan_dict['Component names']
