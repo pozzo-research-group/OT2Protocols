@@ -47,12 +47,12 @@ def get_experiment_plan(filepath):
 
     with open(filepath, newline='') as csvfile:
         reader = csv.reader(csvfile)
-        parsed_dict = {}
+        plan_dict = {}
         for i, row in enumerate(reader):
             assert len(row) == 2
-            parsed_dict[row[0]] = ast.literal_eval(row[1])
+            plan_dict[row[0]] = ast.literal_eval(row[1])
 
-    return parsed_dict
+    return plan_dict
 
 
 def get_min_volume(plan_dict):
@@ -215,3 +215,47 @@ def get_extensive(concentration_dict, plan_dict, chemical_db_df):
     """
     component_df_list = get_component_info(plan_dict, chemical_db_df)
     component_list = plan_dict['Component names']
+    molarity_array = concentration_dict['molarity']
+    sample_volume = plan_dict['Sample volume (uL)']
+
+    def molarity_to_moles(molarity, sample_volume):
+        """
+        Expected units for molarity are mol/liter.
+        Expected units for sample volume are uL
+        Function seems overkill right now, but could be useful to implement\
+        switch cases if units of sample volume are different, or if the output
+        needs to have different units.
+        """
+        calculated_moles = molarity*(sample_volume*1e-6)
+        return calculated_moles
+
+    def moles_to_grams(moles, component_df):
+        mw = component_df['Molecular Weight (g/mol)'].values[0]
+        assert mw is not None, "No molecular weight entered for component" + \
+            component_df['Chemical Abbreviation']
+        calculated_grams = moles*mw
+        return calculated_grams
+
+    def grams_to_mL(grams, component_df):
+        component_density = component_df['Density (g/mL)'].values[0]
+        if np.isnan(component_density):
+            print("No density input for",
+                  component_df['Chemical Abbreviation'].values[0],
+                  'using density = 1.0')
+            component_density = 1.0
+        calculated_mL = grams/component_density
+        return calculated_mL
+
+    moles = np.zeros(molarity_array.shape)
+    grams = np.zeros(molarity_array.shape)
+    mL = np.zeros(molarity_array.shape)
+
+    for i, component_df in enumerate(component_df_list):
+        # Loop over component_df list. Make use of index to loop over columns
+        # of molarity_array.
+        moles[:, i] = molarity_to_moles(molarity_array[:, i], sample_volume)
+        grams[:, i] = moles_to_grams(moles[:, i], component_df)
+        mL[:, i] = grams_to_mL(grams[:, i], component_df)
+
+    output_dict = {'moles': moles, 'grams': grams, 'mL': mL}
+    return output_dict
