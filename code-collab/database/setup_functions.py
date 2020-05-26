@@ -84,7 +84,7 @@ def get_component_info(plan_dict, chemical_db_df):
 def generate_candidate_lattice_concentrations(plan_dict, chemical_db_df):
     """
     Given a experimental plan dictionary loaded from .csv,
-    create a linspace array for every entry and
+    create a linspace or logspace array for every entry and
     obtain every possible combination using meshgrid.
     This will get fed to another function which removes impossible samples
     based on some criteria.
@@ -92,13 +92,27 @@ def generate_candidate_lattice_concentrations(plan_dict, chemical_db_df):
     # Create df for each component based on position in list
     component_df_list = get_component_info(plan_dict, chemical_db_df)
     component_list = plan_dict['Component names']
-    component_concs_list = plan_dict['Concentration linspace [min, max, n]']
+    component_concs_list = plan_dict['Concentrations [min, max, n]']
     component_conc_type_list = plan_dict['Concentration types']
     component_conc_dict = {}
     conc_range_list = []
+    spacing_type = plan_dict['Spacing']
+
     for conc_range in component_concs_list:
-        conc_range_list.append(np.linspace(*conc_range))
+        if spacing_type == "linear":
+            conc_range_list.append(np.linspace(*conc_range))
+        elif spacing_type == "log":
+            # To do:
+            # Handle cases where concentration = 0
+            conc_range_list.append(np.logspace(*conc_range))
+        else:
+            type_list = ["linear", "log"]
+            assert spacing_type in type_list, "spacing_type was not specified \
+in the experiment plan, or the the rquested method is not implemented."
+
+    # Create ever combination of concentrations with meshgrid.
     conc_grid = np.meshgrid(*conc_range_list)
+
     for i in range(len(conc_grid)):
         # Create concentration entry in dictionary,
         # key:value = component name: flattened list of concentrations
@@ -108,7 +122,7 @@ def generate_candidate_lattice_concentrations(plan_dict, chemical_db_df):
 
     # At this stage, if a component has remained unspecified (e.g. water), then
     # we need to apply the mixture rule to obtain its value. Each combination
-    # of concentrations needs to make use of ConcentrationManager methods to
+    # of concentrations needs to make use of concconvert function to
     # calculate unspecified volume_fraction = 1-sum(all other concentrations).
 
     assert len(component_list) != len(component_concs_list), "The provided" \
