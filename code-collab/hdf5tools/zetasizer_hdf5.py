@@ -11,7 +11,7 @@ from fuzzywuzzy import process
 # IE = issues or errors
 # NT = note/noteworthy
 
-# TO DO: 
+# TO DO: y
 # Verify if SystemExist(0) is the way to go to stop execution.
 # Figure out issue with OSError not working with OSError methods.
 # Create documentation to exaplain fuzzy_key_pairing function. Explain "similar" key and values.  
@@ -20,6 +20,7 @@ from fuzzywuzzy import process
 
 
 def find_file_path(): # Changes cwd to based off of user input directory path and returns relative path of selected txt file.
+    # dir_name is the directory where the raw data is located.
     dir_name = input('Enter full path of working directory (no quotes) \n') 
 
     if os.path.exists(dir_name) is False:
@@ -34,18 +35,20 @@ def find_file_path(): # Changes cwd to based off of user input directory path an
     r_file_paths = glob.glob('./*.txt') # list of relative paths of .txt files
     print('The following .txt files were found')
     for i,file_path in enumerate(r_file_paths):
-        print(i, file_path)
-        print()
+        print(i, file_path,'\n')
 
 
-    working_file_input = int(input("Select the appropiate file, Provide corresponding number \n")) # OR ask to type name?
-    working_file_path = r_file_paths[working_file_input] 
+    working_file_index = int(input("Select the appropiate file, Provide corresponding number \n")) # OR ask to type name?
+    working_file_path = r_file_paths[working_file_index] 
     return working_file_path 
 
 
-def create_file(file_path): # Given relative txt file path intializes + returns root hdf5 file group. 
+def create_file(file_path): 
+    """
+    Given relative txt file path intializes + returns root hdf5 file group. 
+    """
     hdf5_file_name = os.path.splitext(file_path)[0] + str('.hdf5') #.splitext makes a tuple = (path w/out ext, .ext)
-
+    
     print(hdf5_file_name)
     checker = input('Is this correct? y/n? \n')
 
@@ -53,9 +56,9 @@ def create_file(file_path): # Given relative txt file path intializes + returns 
         pass
     else:
         raise SystemExit(0)
-   
+
     try:
-        hdf5_file = h5py.File(name = hdf5_file_name, mode = 'w-') # change file to just file, how do I supress built in error and show custom
+        hdf5_file = h5py.File(name=hdf5_file_name, mode = 'w-') # change file to just file, how do I supress built in error and show custom
     except Exception as ex: # issue: although I know it is an OSError (when trying to overwrite)  for some reason when use OSError class none of its methods say an error is present.
         template = "An exception of type {0} occurred. Arguments:\n{1!r}" # currently generalized to show the user what class of Error
         message = template.format(type(ex).__name__, ex.args)
