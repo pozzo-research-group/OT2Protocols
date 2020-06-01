@@ -1,0 +1,13 @@
+{20ml_vials: 
+{wells: 12, volume: 20, unit: ml, wells_length = 4, wells_height = 3}, 
+
+deep_96_well_plate: 
+{wells: 96, volume: 1.5, unit: ml, wells_length = 12, wells_height = 8}
+
+96_well_plate:
+{wells:96, volume: .3, unit: ml, wells_length = 12, wells_height = 8}
+
+metal_96_well_plate:
+{wells:96, volume: .025, unit: ml, wells_length = 12, wells_height = 8}
+}
+
