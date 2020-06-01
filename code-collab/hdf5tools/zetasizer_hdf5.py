@@ -3,7 +3,10 @@ import os
 import glob
 import h5py
 import csv
-from fuzzywuzzy import fuzz # make sure to install python-levenshtein (prevent error warning)
+from fuzzywuzzy import fuzz 
+# make sure to install python-levenshtein (prevent error warning)
+# Microsoft Visual C++ 14.0 is required. Get it with "Microsoft Visual C++ Build Tools" modify existing build tools: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+# Works without, see: https://stackoverflow.com/questions/53980105/string-matching-using-fuzzywuzzy-is-it-using-levenshtein-distance-or-the-ratcli
 from fuzzywuzzy import process
 
 # UO = user option
@@ -16,7 +19,10 @@ from fuzzywuzzy import process
 # Figure out issue with OSError not working with OSError methods.
 # Create documentation to exaplain fuzzy_key_pairing function. Explain "similar" key and values.  
 # Pull fuzzy_key_pairing and subgroup out of function
-# Further test and try to break write_grp_dataset
+# Further test and try to break write_grp_dataset - issue with "group already exist", need to clear mem or give new name?
+# Make it so samples are saved as own hdf5 files instead. But the nwould groups names just have a dataset within it. 
+# Start writing metadata function to grab (if available) hardcoded metadata headers and corresponding keys. 
+# Move over to using a module and then call functions from notebook.
 
 
 def find_file_path(): # Changes cwd to based off of user input directory path and returns relative path of selected txt file.
