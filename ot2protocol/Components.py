@@ -4,7 +4,7 @@
 
 class Component:
     """Initialize your components to make calling of chemical properties easier"""
-    def __init__(self,mw, density = None, name = 'unnamed'):
+    def __init__(self,mw, density = 1, name = 'unnamed'):
 #         Initialize properties of component. If density is unknown will default to 1 g/mL
         self.mw =float(mw)#component molecular weight (g/mol)
         self.density = float(density) #component density at 298.15 K, in g/mL
@@ -22,6 +22,10 @@ dspe_peg2000 = Component(2805.5, name = 'dspe_peg2000')
 cholesterol = Component(386.654, name = 'cholesterol')
 sodiumdodecylsulfate = Component(288.372, name = 'sodiumdodecylsulfate')
 five_cb = Component(249.356, name = 'five_cb')
+hexadecane = Component(226.41, density=.77, name='hexadecane')
+HAuCl4 = Component(339.785, name='HAuCl4')
+sodiumdodecylbenzenesulfonate = Component(342.4, name='sodiumdodecylbenzenesulfonate')
+hepes = Component(238.3012, name='hepes')
 
 # oleic_acid = Component(282.47, name ="oleic_acid")
 # dodecanoic_acid = Component(200.32,name = "dodecanoic_acid")

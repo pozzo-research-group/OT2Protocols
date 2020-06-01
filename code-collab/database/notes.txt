@@ -58,5 +58,34 @@ Do not overspecify so that Hannah can somehow optimize the process. Three
 files: 
 1. stock list first guess by user. Initial guess, e.g. most concentrated
 stock that you would prepare. 
-2. samples which satisfy mixture constraint
+2. samples which satisfy mixture constraint 
 3. available labware (pipette types, etc.)
+
+2020/05/14
+KJL
+1. Point out to hannah that in some cases stocks could consist of more than one
+component, and users would want to specify order. But it's very reasonable to
+just assume stocks are simple (one component and one solvent or pure solvent).
+2. Essentially have this. Makes sense to convert this to a table format e.g.
+.csv. b/c it's representative of sample. 
+3. text, csv, or json file.
+
+SCW
+Three files:
+- Stock information
+	- txt doc?
+	- Dodecanoic acid = {'ethanol': 5, 'water': 2, ... 'sovent' : max solubility}
+	- Oleic acid =
+	- 1 file - all solubility for all chemicals
+	- 1.3M solution dda
+	- manual maximum - researchers choice
+	- Experimental data
+	-
+- Instrument(Labware) Information
+	- txt doc?
+	- 20_ml_vial, trench stock, - 10? different labware types
+	- 'abgene-deep-96-well' = {plate_name, grid=(12, 8), spacing=(9, 9),diameter=9, depth=36, volume=2000}
+- Samples that statisfy the mixture constraint
+	- CSV - volf, M, mass, vol of each sample itself
+	- check which ones are possible &
+- pulling a df from a google sheet - or csv 4
