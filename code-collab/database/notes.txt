@@ -89,3 +89,14 @@ Three files:
 	- CSV - volf, M, mass, vol of each sample itself
 	- check which ones are possible &
 - pulling a df from a google sheet - or csv 4
+
+2020/06/01
+Overall message, need to get to a point that we get value from code we write while continuing to write it.
+
+Suggested tasks
+Automatic molecule suggestion
+Making HDF5 wrappers for different expected measurements (UVVis, DLS, SAXS, SANS, e-chem)
+
+Completed tasks
+Jaime, chemical hazard identification
+Edwin, notebooks related to making HDF for DLS measurement

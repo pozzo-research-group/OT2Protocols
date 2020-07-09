@@ -55,15 +55,6 @@ def get_experiment_plan(filepath):
     return plan_dict
 
 
-def get_min_volume(plan_dict):
-    opentrons.robot.reset()
-    left_pipette = pipette_dict[plan_dict['Left pipette']]
-    right_pipette = pipette_dict[plan_dict['Right pipette']]
-    left_min = left_pipette(mount="left").min_volume
-    right_min = right_pipette(mount="right").min_volume
-    min_volume = min(left_min, right_min)
-
-
 def get_component_info(plan_dict, chemical_db_df):
     """
     Given a plan_dict which contains the names of components that each sample
