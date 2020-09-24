@@ -190,24 +190,35 @@ def calculate_volumes(total_sample_mass, sample_list, component_dict, stock_dict
 
         sample_stock_volumes.append(np.asarray(stock_volumes)*1000)
     return np.asarray(sample_stock_volumes)
+                
+def check_volumes(sample, min_vol, max_vol):
+    "Checks a sample to see if it contains any volumes that the OT2 is unable to pipette, or really any restriction you place"
+    checker = []
+    for vol in sample:
+        if vol >= min_vol and vol <= max_vol:
+            checker.append(1)
+        else:
+            checker.append(0)
+    if sum(checker) == len(sample):
+        return True
+    else:
+        return False
 
-def volume_filter(min_volume, max_volume, volume_sample_canidates): 
-    """Removes any sample volume canidates which do not meet pipette miniumum or maximum working volumes. Current pipetting working volumes are limited to only a minimum of 30uL)"""
-    samples = []
-    for sample in volume_sample_canidates:
-        sample_volumes_filtered = []
-        for volume in sample:
-            if volume >= min_volume and volume <= max_volume:
-                sample_volumes_filtered.append(volume)
-        samples.append(sample_volumes_filtered)
+def filter_samples(sample_canidates, volume_sample_canidates, min_vol, max_vol):
+    """Filters samples based on volume restriction and matches up with previously created wtf sample canidates, 
+    returning an updated list of wtf canidates and volume canidates"""
+    filtered_volumes = []
+    filtered_wtf = []
+    filtered_out = [] # optional just add an append in an else statement
+    for sample_wtfs, sample_vols in zip(sample_canidates, volume_sample_canidates):
+        if check_volumes(sample_vols, min_vol, max_vol) == True:
+            filtered_volumes.append(sample_vols)
+            filtered_wtf.append(sample_wtfs)
+    return (filtered_wtf, filtered_volumes)
     
-    final_samples = []
-    for sample in samples:
-        if len(volume_sample_canidates[0]) == len(sample):
-            final_samples.append(np.asarray(sample))
-    return np.asarray(final_samples)
-
-def rearrange_volumes(sample_volumes):
+    
+def rearrange(sample_volumes):
+    """Rearranges sample information to group samples based on position in sublist. [[a1,b1,c1],[a2,b2,c2]] => [[a1,a2],[b1,b2],[c1,c2]]"""
     component_volumes_rearranged = []
     for i in range(len(sample_volumes[0])): 
         component_volumes = []
