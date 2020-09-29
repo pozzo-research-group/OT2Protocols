@@ -227,3 +227,36 @@ def rearrange(sample_volumes):
             component_volumes.append(component_volume)
         component_volumes_rearranged.append(component_volumes)
     return component_volumes_rearranged  
+
+def graph_canidates(component_dict, sample_canidates_unfiltered, sample_canidates_filtered):
+    wtf_sample_canidates_rearranged = rearrange(sample_canidates_unfiltered)
+    wtf_final_samples_rearranged = rearrange(sample_canidates_filtered)
+
+    marker_size = 20
+
+    x_index = component_dict['Component Graphing X Index']
+    x_component_name = component_dict['Component Shorthand Names'][x_index]
+
+    y_index = component_dict['Component Graphing Y Index']
+    y_component_name = component_dict['Component Shorthand Names'][y_index]
+
+    # Plot all canidates
+    plt.scatter(wtf_sample_canidates_rearranged[x_index], 
+                wtf_sample_canidates_rearranged[y_index], 
+                marker_size, alpha = 0.6, marker = 'x', color = 'b')
+
+    # Plot samples actually made 
+    plt.scatter(wtf_final_samples_rearranged[x_index], # could automate by looking at the experiment names
+                wtf_final_samples_rearranged[y_index], 
+                marker_size, alpha = 0.5, marker = 'o', color = 'r')
+
+
+    plt.xlabel(x_component_name + ' wtf')
+    plt.ylabel(y_component_name + ' wtf')
+
+    # could print on graph other useful information like the concentration of the other components.
+    # plt.xlim([0,0.0012])
+    # plt.ylim([0,1])
+    plt.autoscale(True)
+    plt.show()
+    # index refers to order of list in csv file
