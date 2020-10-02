@@ -34,8 +34,12 @@ def run(protocol:protocol_api, experiment_dict, opentrons_dict, component_volume
     pipette_2 = left_pipette
     tiprack_2 = left_tiprack
 
-    for stock_index, component_volume_list in enumerate(component_volume_lists): # with this the right pipette is always the one with the limited volume
-
+    well_list = []
+#     slot_list = []
+#     well_list = []
+    for stock_index, component_volume_list in enumerate(component_volume_lists): 
+        
+#         slot = 
         if component_volume_list[0] <= pipette_1.max_volume: #initializing pipette with tip for a component
             pipette = pipette_1
             pipette.pick_up_tip(tiprack_1.wells()[stock_index])
@@ -45,8 +49,10 @@ def run(protocol:protocol_api, experiment_dict, opentrons_dict, component_volume
             pipette.pick_up_tip(tiprack_2.wells()[stock_index])
 
         for well_index, volume in enumerate(component_volume_list):
+            well = sample_plate.wells()[well_index]
+            well_list.append(well)
             if volume<pipette_1.max_volume and pipette == pipette_1:
-                pipette.transfer(volume, stock_plate.wells()[stock_index], sample_plate.wells()[well_index], new_tip = 'never')
+                pipette.transfer(volume, stock_plate.wells()[stock_index], sample_plate.wells()[well_index], new_tip = 'never') # not well index because of way volumes are fed, component wise and not sample wise
 
             elif volume>pipette_1.max_volume and pipette == pipette_2:
                 pipette.transfer(volume, stock_plate.wells()[stock_index], sample_plate.wells()[well_index], new_tip = 'never')
@@ -66,4 +72,5 @@ def run(protocol:protocol_api, experiment_dict, opentrons_dict, component_volume
     for line in protocol.commands():
         print(line)
         # try to incorperate the use of pipette.tip_attached
-
+    return(well_list)
+    
