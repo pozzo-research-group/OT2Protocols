@@ -5,8 +5,8 @@ Experiment Tag,"""Experiment 1 Trial 1"""
 Sample Mass,0.65
 Sample Mass Unit ,"""g"""
 Component Shorthand Names,"[ 'dppc', 'dspe-peg', 'PFH', 'ethanol' , 'water']"
-Component Graphing X Index,3
-Component Graphing Y Index,2
+Component Graphing X Index,0
+Component Graphing Y Index,1
 Component Spacing,"""linear"""
 Component Class,"['Pure', 'Liquid Solute', 'Solid Solute', 'Solid Solute', 'Pure']"
 Component Priority ,"[4,3,2,1,5]"
@@ -14,7 +14,8 @@ Component Density (g/mL),"[1, 1, 1.67, 0.79, 1 ]"
 Component MW (g/mol),"[734.04, 2805.5, 41.07, 323, 1]"
 Component Concentration Unit,"['wtf', 'wtf', 'wtf', 'wtf', 'wtf']"
 Component Solution vol to wt density (g/mL),"[0.79,0.79,'NA','NA','NA']"
-"Component Concentrations [min, max, n]","[[0.00015, 0.00015,1], [5e-5,5e-5,1], [1e-5, 1e-4,10],[0.20, 0.40,10]]"
+Blank Component Concentrations,"[0,0,0,0,1]"
+"Component Concentrations [min, max, n]","[[1e-4, 5e-4,10], [1e-5,7.5e-5, 10], [7.5e-5, 7.5e-5,1],[0.40, 0.40,1]]"
 Stock Names,"['dppc-stock', 'dspe-peg-stock', 'ethanol-PFH-Stock','ethanol-stock', 'water' ]"
 Stock Components,"[['ethanol'], ['ethanol','PFH'], ['ethanol','dppc'],['ethanol','dspe-peg'],['water']]"
 Stock Concentration Units,"[ 'molarity','molarity','wtf', 'wtf','wtf']"

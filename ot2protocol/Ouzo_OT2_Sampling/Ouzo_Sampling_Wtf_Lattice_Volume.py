@@ -61,10 +61,12 @@ def generate_candidate_lattice_concentrations(experiment_dict):
         component_name = component_list[i]
         component_conc_dict[component_name] = conc_grid[i].ravel()
     concentration_df = pd.DataFrame.from_dict(component_conc_dict)
-    assert len(component_list) != len(component_concs_list), "The provided"         "experimental instructions are overspecified."
+    assert len(component_list) != len(component_concs_list), "The provided experimental instructions are overspecified."
 
     concentration_array = concentration_df.values
     filtered_concentration_array = sample_sum_filter(concentration_array)
+#     blank_sample_wtfs = np.asarray([experiment_dict['Blank Component Concentrations']])
+#     blank_filtered_concentration_array = np.concatenate((filtered_concentration_array, blank_sample_wtfs))
     return filtered_concentration_array
 
 def dict_creator(root_dict, common_string):
@@ -89,6 +91,25 @@ def mg_per_mL_to_molarity(mg_per_mL, mw):
     molarity = mg_per_mL/mw
     return(molarity)
 
+def average_volume(sample_volumes):
+    tak = []
+    for i in sample_volumes:
+        tak.append(np.average(i))
+    tak = np.asarray(tak)
+    average_vol = np.average(tak)
+    return average_vol
+
+def add_blank(sample_wtfs, sample_volumes, blank_total_volume, blank_component_wtfs):
+    blank_component_volumes = []
+    for component_composition in blank_component_wtfs:
+        volume = component_composition*blank_total_volume
+        blank_component_volumes.append(volume)
+    blank_wtfs_array = np.asarray([blank_component_wtfs])
+    blank_volume_array = np.asarray([blank_component_volumes])
+    blank_and_sample_wtfs = np.concatenate((sample_wtfs, blank_wtfs_array))
+    blank_and_sample_volumes = np.concatenate((sample_volumes, blank_volume_array))
+    return blank_and_sample_wtfs, blank_and_sample_volumes
+    
 
 def calculate_ouzo_volumes(sample_canidate_list, experiment_dict):
     """Given stock and component information alongside selected sample canidates will provide volume for OT2 in microliters. All intermediate calculation volumes are assumed to in milliliters unless stated otherwise. Component order to match order of sample concentration in sample canidate list. Additionally, assumes the good solvent for all other components is the second to last in component list and the poor solvent is last. """
@@ -211,12 +232,16 @@ def create_csv(destination, info_list, wtf_samples, experiment_dict):
     slots = []
     info_cut = info_list[0:len(wtf_samples)] #info only being used of length of number of samples
     for info in info_cut:
-        str_info = str(info) # contains well labware and slot
-        well = str_info[0:2]
+        str_info = str(info)
+        spacing_index = []
+        for i, letter in enumerate(str_info):
+            if letter == ' ':
+                spacing_index.append(i)
+        well = str_info[0:spacing_index[0]]
         wells.append(well)
-        labware = str_info[6:-4] # can be static as the slot and only at max be len 2
+        labware = str_info[spacing_index[1]+1:spacing_index[8]]
         labwares.append(labware)
-        slot = str_info[-1:]
+        slot = str_info[spacing_index[9]+1:]
         slots.append(slot)
 
     csv_entries = []
