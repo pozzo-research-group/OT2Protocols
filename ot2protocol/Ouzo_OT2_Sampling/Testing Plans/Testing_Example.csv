@@ -8,9 +8,7 @@ Component Shorthand Names,"[ 'dppc', 'dspe-peg', 'PFH', 'ethanol' , 'water']"
 Component Graphing X Index,0
 Component Graphing Y Index,1
 Component Spacing,"""linear"""
-Component Class,"['Pure', 'Liquid Solute', 'Solid Solute', 'Solid Solute', 'Pure']"
-Component Priority ,"[4,3,2,1,5]"
-Component Density (g/mL),"[1, 1, 1.67, 0.79, 1 ]"
+Component Density (g/mL),"[1, 1, 1.67, 0.79, 1]"
 Component MW (g/mol),"[734.04, 2805.5, 41.07, 323, 1]"
 Component Concentration Unit,"['wtf', 'wtf', 'wtf', 'wtf', 'wtf']"
 Component Solution vol to wt density (g/mL),"[0.79,0.79,'NA','NA','NA']"
@@ -33,4 +31,8 @@ OT2 Left Tiprack Slot,"""4"""
 OT2 Right Pipette,"""p1000_single"""
 OT2 Right Tiprack,"""opentrons_96_tiprack_1000ul"""
 OT2 Right Tiprack Slot,"""5"""
-OT2 Bottom Clearance (mm),17.78
+OT2 Bottom Clearance (mm),30
+OT2 Destination 1 Labware,"""corning_96_wellplate_360ul_flat"""
+OT2 Destination 1 Slot,"""6"""
+OT2 Destination 2 Labware,"""corning_96_wellplate_360ul_flat"""
+OT2 Destination 2 Slot,"""7"""

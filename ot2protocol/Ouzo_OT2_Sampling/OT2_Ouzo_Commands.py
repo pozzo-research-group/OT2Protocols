@@ -1,4 +1,4 @@
-def run(protocol, experiment_dict, sample_volumes):
+def run(protocol, experiment_dict, sample_volumes, transfer_volume = False, transfer = False):
     """A function which uses a protocol object from the OT2 API V2 module which along with calculated and rearranged volumes will
     produce commands for the OT2. Additionally, information regarding the wells, slot and labware in use will be returned for use in information storage. Volume argument must be rearranged component wise (i.e. a total of n component lists should be fed). Volumes will be compared to available pipette's volume restriction and will be selected to optimize the number of commands. Returning of pipette tips is built in for when pipettes needs to be switched but will eventually switch back. """
     api_level = '2.0'
@@ -17,21 +17,6 @@ def run(protocol, experiment_dict, sample_volumes):
     
     if len(sample_volumes)>len(sample_plate_rows):
         raise ValueError('Too many sample for single sample plate') 
-    
-#     for sample_volume in sample_volumes: # this might be better done outside of the script to better search for things it can still be done here but would be useful to use outside
-#         if sum(sample_volume) > 
-# def rearrange(sample_volumes):
-#     """Rearranges sample information to group samples based on position in sublist. [[a1,b1,c1],[a2,b2,c2]] => [[a1,a2],[b1,b2],[c1,c2]]"""
-#     component_volumes_rearranged = []
-#     for i in range(len(sample_volumes[0])): 
-#         component_volumes = []
-#         for sample in sample_volumes:
-#             component_volume = sample[i]
-#             component_volumes.append(component_volume)
-#         component_volumes_rearranged.append(component_volumes)
-#     return component_volumes_rearranged 
-    
-
            
     component_volume_lists = []    
     for i in range(len(sample_volumes[0])): 
@@ -40,9 +25,7 @@ def run(protocol, experiment_dict, sample_volumes):
             component_volume = sample[i]
             component_volumes.append(component_volume)
         component_volume_lists.append(component_volumes)
-    
-    print(len(component_volume_lists))
-    
+        
     stock_plate = protocol.load_labware(experiment_dict['OT2 Stock Labware'], experiment_dict['OT2 Stock Labware Slot'])
     stock_plate_rows = [well for row in stock_plate.rows() for well in row]
     
@@ -63,7 +46,7 @@ def run(protocol, experiment_dict, sample_volumes):
     tiprack_2_rows = [well for row in tiprack_2.rows() for well in row]
   
     info_list = []
-    for stock_index, component_volume_list in enumerate(component_volume_lists): 
+    for stock_index, component_volume_list in enumerate(component_volume_lists):
         if component_volume_list[0] <= pipette_1.max_volume: #initializing pipette with tip for a component
             pipette = pipette_1
             pipette.pick_up_tip(tiprack_1_rows[stock_index])
@@ -93,7 +76,18 @@ def run(protocol, experiment_dict, sample_volumes):
                 pipette.pick_up_tip(tiprack_2_rows[stock_index])
                 pipette.transfer(volume, stock_plate_rows[stock_index], sample_plate_rows[well_index], new_tip = 'never')
         pipette.drop_tip()
-#     final_well = [stock_plate_rows[stock_index], sample_plate_rows[well_index]]
+    
+    if transfer == 1 and transfer_volume is not False:
+        print('made it')
+        transfer_dest1_labware = protocol.load_labware(experiment_dict['OT2 Destination 1 Labware'], experiment_dict['OT2 Destination 1 Slot'])
+        transfer_dest1_labware_rows = [well for row in transfer_dest1_labware.rows() for well in row]
+        for well_index in range(len(sample_volumes)):
+             pipette.transfer(transfer_volume, sample_plate_rows[well_index], transfer_dest1_labware_rows[well_index])
+     
+#     if transfer_volume == 2:
+#         transfer_dest1_labware =  protocol.load_labware(experiment_dict['OT2 Destination 1 Labware'], experiment_dict['OT2 Destination 1 Slot'])
+#         transfer_dest2_labware =  protocol.load_labware(experiment_dict['OT2 Destination 2 Labware'], experiment_dict['OT2 Destination 2 Slot'])
+        
     
     for line in protocol.commands():
         print(line)
