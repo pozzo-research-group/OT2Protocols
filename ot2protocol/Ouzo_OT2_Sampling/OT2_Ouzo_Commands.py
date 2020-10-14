@@ -20,16 +20,28 @@ def run(protocol, experiment_dict, sample_volumes):
     
 #     for sample_volume in sample_volumes: # this might be better done outside of the script to better search for things it can still be done here but would be useful to use outside
 #         if sum(sample_volume) > 
+# def rearrange(sample_volumes):
+#     """Rearranges sample information to group samples based on position in sublist. [[a1,b1,c1],[a2,b2,c2]] => [[a1,a2],[b1,b2],[c1,c2]]"""
+#     component_volumes_rearranged = []
+#     for i in range(len(sample_volumes[0])): 
+#         component_volumes = []
+#         for sample in sample_volumes:
+#             component_volume = sample[i]
+#             component_volumes.append(component_volume)
+#         component_volumes_rearranged.append(component_volumes)
+#     return component_volumes_rearranged 
     
+
            
     component_volume_lists = []    
     for i in range(len(sample_volumes[0])): 
         component_volumes = []
-    for sample in sample_volumes:
-        component_volume = sample[i]
-        component_volumes.append(component_volume)
+        for sample in sample_volumes:
+            component_volume = sample[i]
+            component_volumes.append(component_volume)
         component_volume_lists.append(component_volumes)
-
+    
+    print(len(component_volume_lists))
     
     stock_plate = protocol.load_labware(experiment_dict['OT2 Stock Labware'], experiment_dict['OT2 Stock Labware Slot'])
     stock_plate_rows = [well for row in stock_plate.rows() for well in row]
@@ -49,7 +61,7 @@ def run(protocol, experiment_dict, sample_volumes):
     
     tiprack_1_rows = [well for row in tiprack_1.rows() for well in row]
     tiprack_2_rows = [well for row in tiprack_2.rows() for well in row]
-
+  
     info_list = []
     for stock_index, component_volume_list in enumerate(component_volume_lists): 
         if component_volume_list[0] <= pipette_1.max_volume: #initializing pipette with tip for a component
