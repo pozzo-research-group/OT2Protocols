@@ -11,7 +11,7 @@ def rearrange(sample_volumes):
         component_volumes_rearranged.append(component_volumes)
     return component_volumes_rearranged 
 
-def graph_canidates(experiment_dict, unfiltered_samples, filtered_samples, xlim = [0,1], ylim = [0,1]):
+def graph_canidates(experiment_dict, unfiltered_samples, filtered_samples, additional_text = None, xlim = [0,1], ylim = [0,1]):
     wtf_unfiltered_rearranged = rearrange(unfiltered_samples)
     wtf_filtered_rearranged = rearrange(filtered_samples)
 
@@ -60,8 +60,19 @@ def graph_canidates(experiment_dict, unfiltered_samples, filtered_samples, xlim 
         text.append(string)
     
     text.append('Remaining component = ' + component_names[completing_component_index])
+    
+    if additional_text is not None:
+        text = text + additional_text
+            
     text_newline = '\n'.join(text) 
+        
 
-    plt.annotate(text_newline, xy=(1.05, 0.85), xycoords='axes fraction')        
+    plt.ticklabel_format(axis="x", style="sci", scilimits=(0,0))
+    plt.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+    plt.annotate(text_newline, xy=(1.05, 0.5), xycoords='axes fraction')        
     plt.autoscale(True)
     plt.show()
+
+def stock_search(experiment_dict, wtf_sample_canidates, stock_canidates_samples, stock_text_list): 
+    for i, stock_canidate_sample in enumerate(stock_canidates_samples):
+        graph_canidates(experiment_dict, wtf_sample_canidates, stock_canidate_sample, additional_text = stock_text_list[i])

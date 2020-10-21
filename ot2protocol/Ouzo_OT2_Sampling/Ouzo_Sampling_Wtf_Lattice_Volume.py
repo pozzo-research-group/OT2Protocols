@@ -33,11 +33,13 @@ def sample_sum_filter(sample_list):
             filtered_samples.append(filled_sample)     
     return np.asarray(filtered_samples)
 
-def generate_candidate_lattice_concentrations(experiment_dict):
+def generate_candidate_lattice_concentrations(experiment_dict, stocks = False, filter_one = True):
     """Given n component linspaces of equivalent concentration units which summmation equal one (i.e. volf or wtf), generates an array of component concentration candidates which is subsequently filtered"""
+    
     component_list = experiment_dict['Component Shorthand Names']
     component_concs_list = experiment_dict['Component Concentrations [min, max, n]']
     component_conc_type_list = experiment_dict['Component Concentration Unit']
+    
     component_conc_dict = {}
     conc_range_list = []
     spacing_type = experiment_dict['Component Spacing']
@@ -64,19 +66,56 @@ def generate_candidate_lattice_concentrations(experiment_dict):
     assert len(component_list) != len(component_concs_list), "The provided experimental instructions are overspecified."
 
     concentration_array = concentration_df.values
-    filtered_concentration_array = sample_sum_filter(concentration_array)
-#     blank_sample_wtfs = np.asarray([experiment_dict['Blank Component Concentrations']])
-#     blank_filtered_concentration_array = np.concatenate((filtered_concentration_array, blank_sample_wtfs))
-    return filtered_concentration_array
+    
+    if filter_one == False:
+        concentration_array = concentration_array
+    else: 
+        concentration_array = sample_sum_filter(concentration_array)
+        
+    return concentration_array
 
-def dict_creator(root_dict, common_string):
-    string_len = len(common_string)
-    new_dict = {}
-    for key in root_dict:
-        if key[0:string_len] == common_string:
-                new_dict[key] = root_dict[key]
-    return new_dict
+def generate_candidate_lattice_stocks(experiment_dict):
+    stock_list = experiment_dict['Stock Names']
+    stock_concs_list = experiment_dict['Stock Concentration [min, max, n]']
+    stock_conc_type_list = experiment_dict['Stock Concentration Units']
+    stock_conc_dict = {}
+    stock_ranges_list = []
 
+    for stock_range in stock_concs_list:
+        stock_ranges_list.append(np.linspace(*stock_range))
+
+    conc_grid = np.meshgrid(*stock_ranges_list)
+
+    for i in range(len(conc_grid)): 
+        # Create concentration entry in dictionary,
+        # key:value = component name: flattened list of concentrations
+        stock_name = stock_list[i]
+        stock_conc_dict[stock_name] = conc_grid[i].ravel()
+    concentration_df = pd.DataFrame.from_dict(stock_conc_dict)
+
+    concentration_array = concentration_df.values
+
+    return concentration_array
+
+def prepare_stock_search(stock_canidates, experiment_dict, wtf_sample_canidates):
+    stock_names = experiment_dict['Stock Names']
+    stock_units = experiment_dict['Stock Concentration Units']
+    
+    filtered_wtf_list = []
+    stock_text_list = []
+    for stock_canidate in stock_canidates:
+        volume_canidates = calculate_ouzo_volumes(wtf_sample_canidates, experiment_dict, searching=True, searching_stock_concentrations=stock_canidate)
+        filtered_wtf_samples, filtered_volume_samples = filter_samples(wtf_sample_canidates, volume_canidates, 30, 1000)
+        filtered_wtf_list.append(filtered_wtf_samples)
+        
+        stock_text = ['', 'Stock Information']
+        
+        for i, stock_name in enumerate(stock_names):
+            additional_stock_text = stock_name + ' ' + str(stock_canidate[i]) + ' ' + stock_units[i]
+            stock_text.append(additional_stock_text) 
+        stock_text_list.append(stock_text)
+
+    return filtered_wtf_list, stock_text_list
 
 def ethanol_wtf_water_to_density(ethanol_wtf):
     """Converts wtf of ethanol in a binary mixture with water to density using a polyfit of 4. The results are mainly used in the calculation of volume from a weight fraction. UPDATE: need to cite or create potential user entry."""
@@ -110,8 +149,8 @@ def add_blank(sample_wtfs, sample_volumes, blank_total_volume, blank_component_w
     blank_and_sample_volumes = np.concatenate((sample_volumes, blank_volume_array))
     return blank_and_sample_wtfs, blank_and_sample_volumes
     
-
-def calculate_ouzo_volumes(sample_canidate_list, experiment_dict):
+    
+def calculate_ouzo_volumes(sample_canidate_list, experiment_dict, searching = False, searching_stock_concentrations = None):
     """Given stock and component information alongside selected sample canidates will provide volume for OT2 in microliters. All intermediate calculation volumes are assumed to in milliliters unless stated otherwise. Component order to match order of sample concentration in sample canidate list. Additionally, assumes the good solvent for all other components is the second to last in component list and the poor solvent is last. """
     total_sample_mass = experiment_dict['Sample Mass']
     component_names = experiment_dict['Component Shorthand Names']
@@ -120,7 +159,12 @@ def calculate_ouzo_volumes(sample_canidate_list, experiment_dict):
     component_mws = experiment_dict['Component MW (g/mol)']
     component_sol_densities = experiment_dict['Component Solution vol to wt density (g/mL)']
     stock_names = experiment_dict['Stock Names']
-    stock_concentrations = experiment_dict['Stock Concentration']
+    
+    if searching == True:
+        stock_concentrations = searching_stock_concentrations
+    else: 
+        stock_concentrations = experiment_dict['Stock Concentration'] # OOH NO CAN DO A SINGLE ONE BUT USE THIS SPECIFIC NAMING CONVENTION
+        
     stock_concentrations_units = experiment_dict['Stock Concentration Units']
     stock_components_list = experiment_dict['Stock Components']
     good_solvent_index = len(component_names)-2 
@@ -129,12 +173,12 @@ def calculate_ouzo_volumes(sample_canidate_list, experiment_dict):
     for sample in sample_canidate_list: 
         total_good_solvent_wtf = sample[good_solvent_index]
         total_good_solvent_mass = total_sample_mass*total_good_solvent_wtf
-        total_good_solvent_volume = total_good_solvent_mass*ethanol_wtf_water_to_density(total_good_solvent_wtf) # need to change so can be an input on the type of good solvent being used
+        total_good_solvent_volume = total_good_solvent_mass*ethanol_wtf_water_to_density(total_good_solvent_wtf)
         stock_volumes = []
         component_volumes = []
 
         for i, component_conc in enumerate(sample):
-            component_stock_conc = experiment_dict['Stock Concentration'][i]
+            component_stock_conc = stock_concentrations[i]
             if i <= (good_solvent_index-1):
                 stock_unit = stock_concentrations_units[i]
                 if  stock_unit == 'molarity': # currently only use case for lipids
@@ -192,9 +236,16 @@ def filter_samples(sample_canidates, volume_sample_canidates, min_vol, max_vol):
         if check_volumes(sample_vols, min_vol, max_vol) == True:
             filtered_volumes.append(sample_vols)
             filtered_wtf.append(sample_wtfs)
-           
-    return (filtered_wtf, filtered_volumes)
     
+    volume_checking_list = [sum(volume) for volume in filtered_volumes]
+    max_volume = max(volume_checking_list)
+    min_volume = min(volume_checking_list)
+    
+    print('Min sample volume = ' + str(min_volume) + 'uL', 
+          'Max sample volume = ' + str(max_volume) + 'uL')
+    
+
+    return (filtered_wtf, filtered_volumes)
     
 def rearrange(sample_volumes):
     """Rearranges sample information to group samples based on position in sublist. [[a1,b1,c1],[a2,b2,c2]] => [[a1,a2],[b1,b2],[c1,c2]]"""
