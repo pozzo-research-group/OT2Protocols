@@ -37,10 +37,10 @@ def run(protocol, experiment_dict, sample_volumes, transfer_volume = False, tran
     left_pipette = protocol.load_instrument(experiment_dict['OT2 Left Pipette'], 'left', tip_racks = [left_tiprack])
     left_pipette.well_bottom_clearance.dispense = experiment_dict['OT2 Bottom Clearance (mm)']
 
-    pipette_1 = right_pipette # the number one slot is always reserved for the volume limited case
-    tiprack_1 = right_tiprack                          
-    pipette_2 = left_pipette
-    tiprack_2 = left_tiprack
+    pipette_1 = left_pipette # the number one slot is always reserved for the volume limited case
+    tiprack_1 = left_tiprack                          
+    pipette_2 = right_pipette
+    tiprack_2 = right_tiprack
     
     tiprack_1_rows = [well for row in tiprack_1.rows() for well in row]
     tiprack_2_rows = [well for row in tiprack_2.rows() for well in row]
