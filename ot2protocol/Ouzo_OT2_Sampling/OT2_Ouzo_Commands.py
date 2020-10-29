@@ -1,6 +1,5 @@
-def run(protocol, experiment_dict, sample_volumes, transfer_volume = False, transfer = False):
-    """A function which uses a protocol object from the OT2 API V2 module which along with calculated and rearranged volumes will
-    produce commands for the OT2. Additionally, information regarding the wells, slot and labware in use will be returned for use in information storage. Volume argument must be rearranged component wise (i.e. a total of n component lists should be fed). Volumes will be compared to available pipette's volume restriction and will be selected to optimize the number of commands. Returning of pipette tips is built in for when pipettes needs to be switched but will eventually switch back. """
+def run(protocol, experiment_dict, sample_volumes, transfer_volume = False, n_transfer_plates = 0):
+    """A function which uses a protocol object from the OT2 API V2 module which along with calculated and rearranged volumes will produce commands for the OT2. Additionally, information regarding the wells, slot and labware in use will be returned for use in information storage. Volume argument must be rearranged component wise (i.e. a total of n component lists should be fed). Volumes will be compared to available pipette's volume restriction and will be selected to optimize the number of commands. Returning of pipette tips is built in for when pipettes needs to be switched but will eventually switch back. """
     api_level = '2.0'
     
     metadata = {
@@ -18,7 +17,7 @@ def run(protocol, experiment_dict, sample_volumes, transfer_volume = False, tran
     if len(sample_volumes)>len(sample_plate_rows):
         raise ValueError('Too many sample for single sample plate') 
            
-    component_volume_lists = []    
+    component_volume_lists = [] # reordering sample list into component wise list to iterate over for pipetting
     for i in range(len(sample_volumes[0])): 
         component_volumes = []
         for sample in sample_volumes:
@@ -38,23 +37,39 @@ def run(protocol, experiment_dict, sample_volumes, transfer_volume = False, tran
     left_pipette.well_bottom_clearance.dispense = experiment_dict['OT2 Bottom Clearance (mm)']
 
     pipette_1 = left_pipette # the number one slot is always reserved for the volume limited case
-    tiprack_1 = left_tiprack                          
+    tiprack_1 = left_tiprack 
+    pipette_1_tiprack_counter = [] # used to keep track of the number of times specfic tiprack has been used as opposed to just how many times tipracks have been used as currently tiprack position = iteration number of stocks.
+    
     pipette_2 = right_pipette
     tiprack_2 = right_tiprack
+    pipette_2_tiprack_counter = []
     
-    tiprack_1_rows = [well for row in tiprack_1.rows() for well in row]
+    tiprack_1_rows = [well for row in tiprack_1.rows() for well in row] # creating list to grab tip position as not row order natively available
     tiprack_2_rows = [well for row in tiprack_2.rows() for well in row]
   
     info_list = []
     for stock_index, component_volume_list in enumerate(component_volume_lists):
+        
+        # need to use built in counter to count the number of times going through
+        
         if component_volume_list[0] <= pipette_1.max_volume: #initializing pipette with tip for a component
             pipette = pipette_1
-            pipette.pick_up_tip(tiprack_1_rows[stock_index])
-
+            if len(pipette_1_tiprack_counter) == 0 : # and the len(counter_2) =
+                pipette.pick_up_tip(tiprack_1_rows[0]) # everytime there is a pickup of a tip append it to the counter. 
+                pipette_1_tiprack_counter.append(tiprack_1_rows[0])
+            else:
+                pipette.pick_up_tip(tiprack_1_rows[len(pipette_1_tiprack_counter)])
+            
+            
         elif component_volume_list[0] > pipette_1.max_volume: #initializing pipette with tip for a component
             pipette = pipette_2
-            pipette.pick_up_tip(tiprack_2_rows[stock_index])
-
+            if len(pipette_2_tiprack_counter) == 0 : # so no cause if pipette one already pick up three then will skip
+                pipette.pick_up_tip(tiprack_2_rows[0]) # everytime there is a pickup of a tip append it to the counter. 
+                pipette_2_tiprack_counter.append(tiprack_2_rows[0])
+            else:
+                pipette.pick_up_tip(tiprack_2_rows[len(pipette_2_tiprack_counter)])
+                pipette_2_tiprack_counter.append(tiprack_2_rows[len(pipette_2_tiprack_counter)])
+            
         for well_index, volume in enumerate(component_volume_list):
             info = sample_plate_rows[well_index]
             info_list.append(info)
@@ -76,9 +91,9 @@ def run(protocol, experiment_dict, sample_volumes, transfer_volume = False, tran
                 pipette.pick_up_tip(tiprack_2_rows[stock_index])
                 pipette.transfer(volume, stock_plate_rows[stock_index], sample_plate_rows[well_index], new_tip = 'never')
         pipette.drop_tip()
+   
     
-    if transfer == 1 and transfer_volume is not False:
-        print('made it')
+    if n_transfer_plates == 1 and transfer_volume is not False:
         transfer_dest1_labware = protocol.load_labware(experiment_dict['OT2 Destination 1 Labware'], experiment_dict['OT2 Destination 1 Slot'])
         transfer_dest1_labware_rows = [well for row in transfer_dest1_labware.rows() for well in row]
         for well_index in range(len(sample_volumes)):
