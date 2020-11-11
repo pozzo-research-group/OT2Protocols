@@ -11,7 +11,11 @@ def rearrange(sample_volumes):
         component_volumes_rearranged.append(component_volumes)
     return component_volumes_rearranged 
 
-def graph_canidates(experiment_dict, unfiltered_samples, filtered_samples, additional_text = None, xlim = [0,1], ylim = [0,1]):
+def graph_canidates(experiment_info_dict, unfiltered, filtered, additional_text = None, xlim = [0,1], ylim = [0,1]):
+    experiment_dict = experiment_info_dict['experiment_plan_dict']
+    unfiltered_samples = unfiltered
+    filtered_samples = filtered
+    
     wtf_unfiltered_rearranged = rearrange(unfiltered_samples)
     wtf_filtered_rearranged = rearrange(filtered_samples)
 
@@ -26,7 +30,6 @@ def graph_canidates(experiment_dict, unfiltered_samples, filtered_samples, addit
     y_component_name = component_names[y_index]
     
 
-    # Plot all canidates
     plt.scatter(wtf_unfiltered_rearranged[x_index], 
                 wtf_unfiltered_rearranged[y_index], 
                 marker_size, alpha = 0.6, marker = 'x', color = 'b')
@@ -73,6 +76,8 @@ def graph_canidates(experiment_dict, unfiltered_samples, filtered_samples, addit
     plt.autoscale(True)
     plt.show()
 
-def stock_search(experiment_dict, wtf_sample_canidates, stock_canidates_samples, stock_text_list): 
+def stock_search(experiment_info_dict, unfiltered_wtfs, stock_canidates_samples, stock_text_list): 
+    wtf_sample_canidates = experiment_info_dict['wtf_sample_canidates']
     for i, stock_canidate_sample in enumerate(stock_canidates_samples):
-        graph_canidates(experiment_dict, wtf_sample_canidates, stock_canidate_sample, additional_text = stock_text_list[i])
+        stock_text_list[i].append('Index = ' + str(i))
+        graph_canidates(experiment_info_dict, wtf_sample_canidates, stock_canidate_sample, additional_text = stock_text_list[i])

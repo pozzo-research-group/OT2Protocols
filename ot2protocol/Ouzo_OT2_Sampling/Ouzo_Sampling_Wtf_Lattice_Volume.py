@@ -97,25 +97,42 @@ def generate_candidate_lattice_stocks(experiment_dict):
 
     return concentration_array
 
-def prepare_stock_search(stock_canidates, experiment_dict, wtf_sample_canidates):
+def prepare_stock_search(stock_canidates, experiment_dict, wtf_sample_canidates, min_vol, max_vol):
     stock_names = experiment_dict['Stock Names']
     stock_units = experiment_dict['Stock Concentration Units']
     
     filtered_wtf_list = []
+    filtered_volumes_list = []
     stock_text_list = []
     for stock_canidate in stock_canidates:
         volume_canidates = calculate_ouzo_volumes(wtf_sample_canidates, experiment_dict, searching=True, searching_stock_concentrations=stock_canidate)
-        filtered_wtf_samples, filtered_volume_samples = filter_samples(wtf_sample_canidates, volume_canidates, 30, 1000)
+        filtered_wtf_samples, filtered_volumes_samples, min_sample_volume, max_sample_volume = filter_samples(wtf_sample_canidates, volume_canidates, min_vol, max_vol)
         filtered_wtf_list.append(filtered_wtf_samples)
+        filtered_volumes_list.append(filtered_volumes_samples)
         
         stock_text = ['', 'Stock Information']
         
         for i, stock_name in enumerate(stock_names):
             additional_stock_text = stock_name + ' ' + str(stock_canidate[i]) + ' ' + stock_units[i]
             stock_text.append(additional_stock_text) 
+        stock_text.append('Number of samples = ' + str(len(filtered_wtf_samples)))
+        stock_text.append('Miniumum Sample Volume =' + str(min_sample_volume) + 'uL')
+        stock_text.append('Maximum Sample Volume =' + str(min_sample_volume) + 'uL')
         stock_text_list.append(stock_text)
 
-    return filtered_wtf_list, stock_text_list
+    return filtered_wtf_list, filtered_volumes_list, stock_text_list
+
+# def prepare_stock_search_wrap(experiment_info_dict): 
+#     min_vol = experiment_info_dict['Minimum Sample volume (uL)']
+#     max_vol = experiment_info_dict['Maximum Sample volume (uL)']
+#     experiment_dict = experiment_info_dict['experiment_plan_dict']
+#     wtf_sample_canidates = experiment_info_dict['wtf_sample_canidates']
+#     stock_concnetrations_array = generate_candidate_lattice_stocks(experiment_dict)
+#     filtered_stock_concentrations, stock_text, min_sample_vol, max_sample_vol = prepare_stock_search(stock_concnetrations_array, experiment_dict, wtf_sample_canidates, min_vol, max_vol)
+    
+#     stock_search_dict = {'Stock Concentrations': filtered_stock_concentrations, 'Stock Text': stock_text}
+#     return stock_search_dict
+
 
 def ethanol_wtf_water_to_density(ethanol_wtf):
     """Converts wtf of ethanol in a binary mixture with water to density using a polyfit of 4. The results are mainly used in the calculation of volume from a weight fraction. UPDATE: need to cite or create potential user entry."""
@@ -152,7 +169,7 @@ def add_blank(sample_wtfs, sample_volumes, blank_total_volume, blank_component_w
     
 def calculate_ouzo_volumes(sample_canidate_list, experiment_dict, searching = False, searching_stock_concentrations = None):
     """Given stock and component information alongside selected sample canidates will provide volume for OT2 in microliters. All intermediate calculation volumes are assumed to in milliliters unless stated otherwise. Component order to match order of sample concentration in sample canidate list. Additionally, assumes the good solvent for all other components is the second to last in component list and the poor solvent is last. """
-    total_sample_mass = experiment_dict['Sample Mass']
+    total_sample_mass = experiment_dict['Sample Mass (g)']
     component_names = experiment_dict['Component Shorthand Names']
     component_units = experiment_dict['Component Concentration Unit']
     component_densities = experiment_dict['Component Density (g/mL)']
@@ -238,14 +255,15 @@ def filter_samples(sample_canidates, volume_sample_canidates, min_vol, max_vol):
             filtered_wtf.append(sample_wtfs)
     
     volume_checking_list = [sum(volume) for volume in filtered_volumes]
-    max_volume = max(volume_checking_list)
-    min_volume = min(volume_checking_list)
+    min_sample_volume = min(volume_checking_list)
+    max_sample_volume = max(volume_checking_list)
     
-    print('Min sample volume = ' + str(min_volume) + 'uL', 
-          'Max sample volume = ' + str(max_volume) + 'uL')
+    
+#     print('Min sample volume = ' + str(min_volume) + 'uL', 
+#           'Max sample volume = ' + str(max_volume) + 'uL')
     
 
-    return (filtered_wtf, filtered_volumes)
+    return (filtered_wtf, filtered_volumes, min_sample_volume, max_sample_volume)
     
 def rearrange(sample_volumes):
     """Rearranges sample information to group samples based on position in sublist. [[a1,b1,c1],[a2,b2,c2]] => [[a1,a2],[b1,b2],[c1,c2]]"""
@@ -257,7 +275,37 @@ def rearrange(sample_volumes):
             component_volumes.append(component_volume)
         component_volumes_rearranged.append(component_volumes)
     return component_volumes_rearranged 
+
+def experiment_sample_dict(experiment_plan_path, min_input_volume, max_input_volume, filter_sum_one = True): 
+    """A wrapper for functions required to create ouzo samples, where final information is presented in returned dictionary."""
+    experiment_plan_dict = get_experiment_plan(experiment_plan_path)
+    wtf_sample_canidates = generate_candidate_lattice_concentrations(experiment_plan_dict, filter_one=filter_sum_one)
+    volume_sample_canidates = calculate_ouzo_volumes(wtf_sample_canidates, experiment_plan_dict)
+    filtered_wtf_samples, filtered_volume_samples, min_sample_volume, max_sample_volume = filter_samples(wtf_sample_canidates, volume_sample_canidates, min_input_volume, max_input_volume)
     
+    experiment_info_dict = {'experiment_plan_dict': experiment_plan_dict,
+                           'wtf_sample_canidates': wtf_sample_canidates,
+                           'volume_sample_canidates': volume_sample_canidates,
+                           'filtered_wtf_samples': filtered_wtf_samples,
+                           'filtered_volume_samples': filtered_volume_samples, 
+                           'Minimum Sample volume (uL)': min_sample_volume, 
+                           'Maximum Sample volume (uL)': max_sample_volume}
+    return experiment_info_dict
+
+def calculate_stock_volumes(experiment_dict, sample_volumes):
+    rearranged_by_component_volumes = rearrange(sample_volumes)
+    summed_stock_volumes = [sum(stock_volumes) for stock_volumes in rearranged_by_component_volumes]
+    stock_names = experiment_dict['Stock Names']
+    stock_concentrations = experiment_dict['Stock Concentration']
+    stock_units = experiment_dict['Stock Concentration Units']
+    
+    
+    for i in range(len(summed_stock_volumes)):
+        string = str(summed_stock_volumes[i]/1000) + ' mL of ' + stock_names[i] + ' w/ conc of ' + str(stock_concentrations[i]) + ' ' + stock_units[i]
+        print(string)
+                   
+    
+
 def create_csv(destination, info_list, wtf_samples, experiment_dict):  
     """Creates a CSV which contains sample information in addition tieing a unique ID to the row of information. Each row in the created csv corresponds to one sample and the unique ID contains date and well information. Information is gathered from the printed commands of the OT2 either when executing or simulating. Given the type of execution in current code, this only supports the case of consecutive sample making (i.e. samples made in well order, with no skipping of wells)."""
     

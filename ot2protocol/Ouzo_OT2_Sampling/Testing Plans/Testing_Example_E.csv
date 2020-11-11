@@ -2,8 +2,7 @@ Protocol Version,"""2.0"""
 Experimenter,"""Edwin Antonio"""
 Project Tag,"""Ethanol and PFH Scan"""
 Experiment Tag,"""Experiment 1 Trial 1"""
-Sample Mass,1.4
-Sample Mass Unit ,"""g"""
+Sample Mass (g),1.4
 Component Shorthand Names,"[ 'dppc', 'dspe-peg', 'PFH', 'ethanol' , 'water']"
 Component Graphing X Index,2
 Component Graphing Y Index,3
@@ -20,20 +19,26 @@ Stock Concentration Units,"[ 'molarity','molarity','wtf', 'wtf','wtf']"
 "Stock Concentration [min, max, n]","[[0.002724647, 0.002724647,1], [0.000356443,0.000356443, 1], [0.0005, 0.0020,8] , [1,1,1], [1,1,1]]"
 Stock Concentration,"[0.002724647,0.000356443,0.002,1,1]"
 Stock Appx Density (g/mL),"[0.79, 0.79, 0.79, 0.79, 1]"
-OT2 Sample Labware,"""corning_96_wellplate_360ul_flat"""
-OT2 Sample Labware Slot,"""2"""
+OT2 Destination Labwares,"[""corning_96_wellplate_360ul_flat"", ""corning_96_wellplate_360ul_flat""]"
+OT2 Destination Labware Slots,"[""2"",""3""]"
 OT2 Sample Labware Start,0
 OT2 Stock Labware,"""corning_96_wellplate_360ul_flat"""
 OT2 Stock Labware Slot,"""1"""
 OT2 Stock Labware Stock Position,"[1,2,3,4,5]"
 OT2 Left Pipette,"""p300_single"""
-OT2 Left Tiprack,"""opentrons_96_tiprack_300ul"""
-OT2 Left Tiprack Slot,"""4"""
+OT2 Left Tipracks,"[""opentrons_96_tiprack_300ul"", ""opentrons_96_tiprack_300ul""]"
+OT2 Left Tiprack Slots,"[""10"", ""7""]"
 OT2 Right Pipette,"""p1000_single"""
-OT2 Right Tiprack,"""opentrons_96_tiprack_1000ul"""
-OT2 Right Tiprack Slot,"""5"""
-OT2 Bottom Clearance (mm),30
-OT2 Destination 1 Labware,"""corning_96_wellplate_360ul_flat"""
-OT2 Destination 1 Slot,"""6"""
-OT2 Destination 2 Labware,"""corning_96_wellplate_360ul_flat"""
-OT2 Destination 2 Slot,"""7"""
+OT2 Right Tipracks,"[""opentrons_96_tiprack_1000ul"", ""opentrons_96_tiprack_1000ul""]"
+OT2 Right Tiprack Slots,"[""11"",""8""]"
+OT2 Bottom Dispensing Clearance (mm),30
+OT2 Dependent Transfer Volume (uL),350
+OT2 Dependent Transfer Dest Labwares,"[""corning_96_wellplate_360ul_flat""]"
+OT2 Dependent Transfer Dest Slots,"[""5""]"
+OT2 Independent Transfer Volume (uL),300
+OT2 Independent Transfer Source Labwares,"[""corning_96_wellplate_360ul_flat"", ""corning_96_wellplate_360ul_flat""]"
+OT2 Independent Transfer Source Slots,"[""2"", ""3""]"
+"OT2 Independent Transfer Source [Start, Stop]","[0,5]"
+OT2 Independent Transfer Dest Labwares,"[""corning_96_wellplate_360ul_flat"", ""corning_96_wellplate_360ul_flat""]"
+OT2 Independent Transfer Dest Slots,"[""5"",""6""]"
+"OT2 Independent Transfer Dest [Start, Stop]","[0,5]"
