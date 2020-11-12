@@ -17,7 +17,7 @@ Stock Names,"['dppc-stock', 'dspe-peg-stock', 'ethanol-PFH-Stock','ethanol-stock
 Stock Components,"[['ethanol'], ['ethanol','PFH'], ['ethanol','dppc'],['ethanol','dspe-peg'],['water']]"
 Stock Concentration Units,"[ 'molarity','molarity','wtf', 'wtf','wtf']"
 "Stock Concentration [min, max, n]","[[0.002724647, 0.002724647,1], [0.000356443,0.000356443, 1], [0.005, 0.020,8] , [1,1,1], [1,1,1]]"
-Stock Concentration,"[0.002724647,0.000356443,0.02,1,1]"
+Stock Concentration,"[0.002724647,0.000356443,0.0149199,1,1]"
 Stock Appx Density (g/mL),"[0.79, 0.79, 0.79, 0.79, 1]"
 OT2 Destination Labwares,"[""corning_96_wellplate_360ul_flat"", ""corning_96_wellplate_360ul_flat""]"
 OT2 Destination Labware Slots,"[""2"",""3""]"

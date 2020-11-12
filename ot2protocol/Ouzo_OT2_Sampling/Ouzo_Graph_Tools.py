@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
 
 def rearrange(sample_volumes):
     """Rearranges sample information to group samples based on position in sublist. [[a1,b1,c1],[a2,b2,c2]] => [[a1,a2],[b1,b2],[c1,c2]]"""
@@ -81,3 +83,45 @@ def stock_search(experiment_info_dict, unfiltered_wtfs, stock_canidates_samples,
     for i, stock_canidate_sample in enumerate(stock_canidates_samples):
         stock_text_list[i].append('Index = ' + str(i))
         graph_canidates(experiment_info_dict, wtf_sample_canidates, stock_canidate_sample, additional_text = stock_text_list[i])
+        
+def baseline_correction(df_samples, baseline_series): 
+    """Given the series iloc of a the blank, subtracts the value at every wavelength of blank at resp. wavelength. 
+    Simple subtraction blanking."""
+    new_df_con = []
+    for key, row in df_samples.iterrows():
+        if key == 'Wavelength':
+            wavelengths = row
+            new_df_con.append(wavelengths)
+        else: 
+            series = row
+#             series = (pd.to_numeric(series , errors='coerce').fillna(0)) # just know that the series is an instance so will not update df
+            corrected = series.subtract(baseline_series)
+            new_df_con.append(corrected)
+    
+    baseline_corrected_df = pd.concat(new_df_con, axis = 1).T
+    baseline_corrected_df.index = df_samples[0].index
+    return baseline_corrected_df
+
+def plot_single_wavelength(dataframe, wavelength):
+    for i, (key, row) in enumerate(dataframe.iterrows()):
+        if key == 'Wavelength':
+            wavelengths = row
+    
+    index = np.where(wavelengths == wavelength)[0][0]
+    wells = []
+    absorbances = []
+    for i, (key, row) in enumerate(dataframe.iterrows()):
+        if key == 'Wavelength':
+            pass
+        else:
+            well = key
+            wells.append(well)
+            absorbance = row[index]
+            absorbances.append(absorbance)
+
+    plt.scatter(range(len(wells)), absorbances, s = 20, alpha = 0.5, marker = 'o', color = 'r') # in order for sample creation and analysis 
+    plt.xlabel('Well Index')
+    plt.ylabel('Absorbance')
+    
+    return absorbances
+
