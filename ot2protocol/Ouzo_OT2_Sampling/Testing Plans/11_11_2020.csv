@@ -2,22 +2,22 @@ Protocol Version,"""2.0"""
 Experimenter,"""Edwin Antonio"""
 Project Tag,"""Ethanol and PFH Scan"""
 Experiment Tag,"""Experiment 1 Trial 1"""
-Sample Mass (g),1.4
+Sample Mass (g),0.7
 Component Shorthand Names,"[ 'dppc', 'dspe-peg', 'PFH', 'ethanol' , 'water']"
-Component Graphing X Index,2
-Component Graphing Y Index,3
+Component Graphing X Index,3
+Component Graphing Y Index,2
 Component Spacing,"""linear"""
 Component Density (g/mL),"[1, 1, 1.67, 0.79, 1]"
 Component MW (g/mol),"[734.04, 2805.5, 41.07, 323, 1]"
 Component Concentration Unit,"['wtf', 'wtf', 'wtf', 'wtf', 'wtf']"
 Component Solution vol to wt density (g/mL),"[0.79,0.79,'NA','NA','NA']"
-Blank Component Concentrations,"[0,0,0,0,1]"
-"Component Concentrations [min, max, n]","[[0.00015, 0.00015,1], [5e-5,5e-5,1], [1e-5, 1e-3,40],[0.20, 0.70,20]]"
+Blank Component Concentrations (wtfs),"[0,0,0,0,1]"
+"Component Concentrations [min, max, n]","[[0.00030, 0.00030,1], [1.25e-4,1.25e-4,1], [1e-5, 0.6e-2,40],[0.3, 0.6, 20]]"
 Stock Names,"['dppc-stock', 'dspe-peg-stock', 'ethanol-PFH-Stock','ethanol-stock', 'water-stock' ]"
 Stock Components,"[['ethanol'], ['ethanol','PFH'], ['ethanol','dppc'],['ethanol','dspe-peg'],['water']]"
 Stock Concentration Units,"[ 'molarity','molarity','wtf', 'wtf','wtf']"
-"Stock Concentration [min, max, n]","[[0.002724647, 0.002724647,1], [0.000356443,0.000356443, 1], [0.0005, 0.0020,8] , [1,1,1], [1,1,1]]"
-Stock Concentration,"[0.002724647,0.000356443,0.002,1,1]"
+"Stock Concentration [min, max, n]","[[0.002724647, 0.002724647,1], [0.000356443,0.000356443, 1], [0.005, 0.020,8] , [1,1,1], [1,1,1]]"
+Stock Concentration,"[0.002724647,0.000356443,0.02,1,1]"
 Stock Appx Density (g/mL),"[0.79, 0.79, 0.79, 0.79, 1]"
 OT2 Destination Labwares,"[""corning_96_wellplate_360ul_flat"", ""corning_96_wellplate_360ul_flat""]"
 OT2 Destination Labware Slots,"[""2"",""3""]"
