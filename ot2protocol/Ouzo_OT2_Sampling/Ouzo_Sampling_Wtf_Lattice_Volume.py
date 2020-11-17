@@ -33,16 +33,16 @@ def sample_sum_filter(sample_list):
             filtered_samples.append(filled_sample)     
     return np.asarray(filtered_samples)
 
-def generate_candidate_lattice_concentrations(experiment_dict, stocks = False, filter_one = True):
+def generate_candidate_lattice_concentrations(experiment_csv_dict, stocks = False, filter_one = True):
     """Given n component linspaces of equivalent concentration units which summmation equal one (i.e. volf or wtf), generates an array of component concentration candidates which is subsequently filtered"""
     
-    component_list = experiment_dict['Component Shorthand Names']
-    component_concs_list = experiment_dict['Component Concentrations [min, max, n]']
-    component_conc_type_list = experiment_dict['Component Concentration Unit']
+    component_list = experiment_csv_dict['Component Shorthand Names']
+    component_concs_list = experiment_csv_dict['Component Concentrations [min, max, n]']
+    component_conc_type_list = experiment_csv_dict['Component Concentration Unit']
     
     component_conc_dict = {}
     conc_range_list = []
-    spacing_type = experiment_dict['Component Spacing']
+    spacing_type = experiment_csv_dict['Component Spacing']
 
     for conc_range in component_concs_list:
         if spacing_type == "linear":
@@ -74,10 +74,10 @@ def generate_candidate_lattice_concentrations(experiment_dict, stocks = False, f
         
     return concentration_array
 
-def generate_candidate_lattice_stocks(experiment_dict):
-    stock_list = experiment_dict['Stock Names']
-    stock_concs_list = experiment_dict['Stock Concentration [min, max, n]']
-    stock_conc_type_list = experiment_dict['Stock Concentration Units']
+def generate_candidate_lattice_stocks(experiment_csv_dict):
+    stock_list = experiment_csv_dict['Stock Names']
+    stock_concs_list = experiment_csv_dict['Stock Concentration [min, max, n]']
+    stock_conc_type_list = experiment_csv_dict['Stock Concentration Units']
     stock_conc_dict = {}
     stock_ranges_list = []
 
@@ -97,15 +97,15 @@ def generate_candidate_lattice_stocks(experiment_dict):
 
     return concentration_array
 
-def prepare_stock_search(stock_canidates, experiment_dict, wtf_sample_canidates, min_vol, max_vol):
-    stock_names = experiment_dict['Stock Names']
-    stock_units = experiment_dict['Stock Concentration Units']
+def prepare_stock_search(stock_canidates, experiment_csv_dict, wtf_sample_canidates, min_vol, max_vol):
+    stock_names = experiment_csv_dict['Stock Names']
+    stock_units = experiment_csv_dict['Stock Concentration Units']
     
     filtered_wtf_list = []
     filtered_volumes_list = []
     stock_text_list = []
     for stock_canidate in stock_canidates:
-        volume_canidates = calculate_ouzo_volumes(wtf_sample_canidates, experiment_dict, searching=True, searching_stock_concentrations=stock_canidate)
+        volume_canidates = calculate_ouzo_volumes(wtf_sample_canidates, experiment_csv_dict, searching=True, searching_stock_concentrations=stock_canidate)
         filtered_wtf_samples, filtered_volumes_samples, min_sample_volume, max_sample_volume = filter_samples(wtf_sample_canidates, volume_canidates, min_vol, max_vol)
         filtered_wtf_list.append(filtered_wtf_samples)
         filtered_volumes_list.append(filtered_volumes_samples)
@@ -119,16 +119,20 @@ def prepare_stock_search(stock_canidates, experiment_dict, wtf_sample_canidates,
         stock_text.append('Miniumum Sample Volume =' + str(min_sample_volume) + 'uL')
         stock_text.append('Maximum Sample Volume =' + str(min_sample_volume) + 'uL')
         stock_text_list.append(stock_text)
-
-    return filtered_wtf_list, filtered_volumes_list, stock_text_list
+    
+    prepare_stock_dict = {'stocks_wtf_lists': filtered_wtf_list, 
+                          'stocks_volumes_lists': filtered_volumes_list, 
+                          'stock_text_info': stock_text_list}
+  
+    return prepare_stock_dict
 
 # def prepare_stock_search_wrap(experiment_info_dict): 
 #     min_vol = experiment_info_dict['Minimum Sample volume (uL)']
 #     max_vol = experiment_info_dict['Maximum Sample volume (uL)']
-#     experiment_dict = experiment_info_dict['experiment_plan_dict']
+#     experiment_csv_dict = experiment_info_dict['experiment_plan_dict']
 #     wtf_sample_canidates = experiment_info_dict['wtf_sample_canidates']
-#     stock_concnetrations_array = generate_candidate_lattice_stocks(experiment_dict)
-#     filtered_stock_concentrations, stock_text, min_sample_vol, max_sample_vol = prepare_stock_search(stock_concnetrations_array, experiment_dict, wtf_sample_canidates, min_vol, max_vol)
+#     stock_concnetrations_array = generate_candidate_lattice_stocks(experiment_csv_dict)
+#     filtered_stock_concentrations, stock_text, min_sample_vol, max_sample_vol = prepare_stock_search(stock_concnetrations_array, experiment_csv_dict, wtf_sample_canidates, min_vol, max_vol)
     
 #     stock_search_dict = {'Stock Concentrations': filtered_stock_concentrations, 'Stock Text': stock_text}
 #     return stock_search_dict
@@ -167,23 +171,23 @@ def add_blank(sample_wtfs, sample_volumes, blank_total_volume, blank_component_w
     return blank_and_sample_wtfs, blank_and_sample_volumes
     
     
-def calculate_ouzo_volumes(sample_canidate_list, experiment_dict, searching = False, searching_stock_concentrations = None):
+def calculate_ouzo_volumes(sample_canidate_list, experiment_csv_dict, searching = False, searching_stock_concentrations = None):
     """Given stock and component information alongside selected sample canidates will provide volume for OT2 in microliters. All intermediate calculation volumes are assumed to in milliliters unless stated otherwise. Component order to match order of sample concentration in sample canidate list. Additionally, assumes the good solvent for all other components is the second to last in component list and the poor solvent is last. """
-    total_sample_mass = experiment_dict['Sample Mass (g)']
-    component_names = experiment_dict['Component Shorthand Names']
-    component_units = experiment_dict['Component Concentration Unit']
-    component_densities = experiment_dict['Component Density (g/mL)']
-    component_mws = experiment_dict['Component MW (g/mol)']
-    component_sol_densities = experiment_dict['Component Solution vol to wt density (g/mL)']
-    stock_names = experiment_dict['Stock Names']
+    total_sample_mass = experiment_csv_dict['Sample Mass (g)']
+    component_names = experiment_csv_dict['Component Shorthand Names']
+    component_units = experiment_csv_dict['Component Concentration Unit']
+    component_densities = experiment_csv_dict['Component Density (g/mL)']
+    component_mws = experiment_csv_dict['Component MW (g/mol)']
+    component_sol_densities = experiment_csv_dict['Component Solution vol to wt density (g/mL)']
+    stock_names = experiment_csv_dict['Stock Names']
     
     if searching == True:
         stock_concentrations = searching_stock_concentrations
     else: 
-        stock_concentrations = experiment_dict['Stock Concentration'] # OOH NO CAN DO A SINGLE ONE BUT USE THIS SPECIFIC NAMING CONVENTION
+        stock_concentrations = experiment_csv_dict['Stock Concentration'] # OOH NO CAN DO A SINGLE ONE BUT USE THIS SPECIFIC NAMING CONVENTION
         
-    stock_concentrations_units = experiment_dict['Stock Concentration Units']
-    stock_components_list = experiment_dict['Stock Components']
+    stock_concentrations_units = experiment_csv_dict['Stock Concentration Units']
+    stock_components_list = experiment_csv_dict['Stock Components']
     good_solvent_index = len(component_names)-2 
 
     sample_stock_volumes = []
@@ -205,8 +209,8 @@ def calculate_ouzo_volumes(sample_canidate_list, experiment_dict, searching = Fa
                     component_moles = component_mass/component_mw
                     component_stock_volume = component_moles*1000/component_stock_conc
                 if stock_unit == 'wtf': # use case for everything except lipids and pure solvents
-                    stock_density = experiment_dict['Stock Appx Density (g/mL)'][i]
-                    component_density = experiment_dict['Component Density (g/mL)']
+                    stock_density = experiment_csv_dict['Stock Appx Density (g/mL)'][i]
+                    component_density = experiment_csv_dict['Component Density (g/mL)']
                     component_mass = component_conc*total_sample_mass
                     component_volume = component_mass/component_density # lipids are assumed to have 0 volume, but must account for oil. 
                     component_volumes.append(component_volume)
@@ -292,25 +296,27 @@ def experiment_sample_dict(experiment_plan_path, min_input_volume, max_input_vol
                            'Maximum Sample volume (uL)': max_sample_volume}
     return experiment_info_dict
 
-def calculate_stock_volumes(experiment_dict, sample_volumes):
+def calculate_stock_volumes(experiment_csv_dict, sample_volumes):
     rearranged_by_component_volumes = rearrange(sample_volumes)
     summed_stock_volumes = [sum(stock_volumes) for stock_volumes in rearranged_by_component_volumes]
-    stock_names = experiment_dict['Stock Names']
-    stock_concentrations = experiment_dict['Stock Concentration']
-    stock_units = experiment_dict['Stock Concentration Units']
+    stock_names = experiment_csv_dict['Stock Names']
+    stock_concentrations = experiment_csv_dict['Stock Concentration']
+    stock_units = experiment_csv_dict['Stock Concentration Units']
     
     
     for i in range(len(summed_stock_volumes)):
         string = str(summed_stock_volumes[i]/1000) + ' mL of ' + stock_names[i] + ' w/ conc of ' + str(stock_concentrations[i]) + ' ' + stock_units[i]
         print(string)
                    
-    
+def selected_down(array, lower_index, upper_index):
+    array = array[lower_index:upper_index]
+    return array
 
-def create_csv(destination, info_list, wtf_samples, experiment_dict):  
+def create_csv(destination, info_list, wtf_samples, experiment_csv_dict):  
     """Creates a CSV which contains sample information in addition tieing a unique ID to the row of information. Each row in the created csv corresponds to one sample and the unique ID contains date and well information. Information is gathered from the printed commands of the OT2 either when executing or simulating. Given the type of execution in current code, this only supports the case of consecutive sample making (i.e. samples made in well order, with no skipping of wells)."""
     
     time = str(datetime.datetime.now(timezone('US/Pacific')).date()) # should be embaded once you run
-    component_names = experiment_dict['Component Shorthand Names']
+    component_names = experiment_csv_dict['Component Shorthand Names']
     UID_header = ['UID']
     slot_header = ['Slot']
     labware_header = ['Labware']
@@ -346,7 +352,7 @@ def create_csv(destination, info_list, wtf_samples, experiment_dict):
     csv_entries = []
     ## Adding unique id and other information into one sublist to be fed as row into writer
     for component_wtfs, slot, labware, well in zip(wtf_samples, slots, labwares, wells):
-        UID = time + "_" +experiment_dict['Component Shorthand Names'][experiment_dict['Component Graphing X Index']]+ "_" + experiment_dict['Component Shorthand Names'][experiment_dict['Component Graphing Y Index']] + "_" + well
+        UID = time + "_" +experiment_csv_dict['Component Shorthand Names'][experiment_csv_dict['Component Graphing X Index']]+ "_" + experiment_csv_dict['Component Shorthand Names'][experiment_csv_dict['Component Graphing Y Index']] + "_" + well
         csv_entry = [UID] + component_wtfs.tolist() + [slot] + [labware] + [well]
         csv_entries.append(csv_entry)
 

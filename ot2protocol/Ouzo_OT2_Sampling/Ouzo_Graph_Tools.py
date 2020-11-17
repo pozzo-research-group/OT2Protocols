@@ -13,8 +13,8 @@ def rearrange(sample_volumes):
         component_volumes_rearranged.append(component_volumes)
     return component_volumes_rearranged 
 
-def graph_canidates(experiment_info_dict, unfiltered, filtered, additional_text = None, xlim = [0,1], ylim = [0,1]):
-    experiment_dict = experiment_info_dict['experiment_plan_dict']
+def graph_canidates(experiment_csv_dict, unfiltered, filtered, additional_text = None, xlim = [0,1], ylim = [0,1]):
+    experiment_csv_dict = experiment_csv_dict
     unfiltered_samples = unfiltered
     filtered_samples = filtered
     
@@ -23,12 +23,12 @@ def graph_canidates(experiment_info_dict, unfiltered, filtered, additional_text 
 
     marker_size = 20
 
-    component_names = experiment_dict['Component Shorthand Names']
+    component_names = experiment_csv_dict['Component Shorthand Names']
     
-    x_index = experiment_dict['Component Graphing X Index']
+    x_index = experiment_csv_dict['Component Graphing X Index']
     x_component_name = component_names[x_index]
 
-    y_index = experiment_dict['Component Graphing Y Index']
+    y_index = experiment_csv_dict['Component Graphing Y Index']
     y_component_name = component_names[y_index]
     
 
@@ -53,8 +53,8 @@ def graph_canidates(experiment_info_dict, unfiltered, filtered, additional_text 
         else:
             other_indexes.append(i)
         
-    component_units = experiment_dict['Component Concentration Unit']
-    component_concentrations = experiment_dict['Component Concentrations [min, max, n]']
+    component_units = experiment_csv_dict['Component Concentration Unit']
+    component_concentrations = experiment_csv_dict['Component Concentrations [min, max, n]']
     
     text = []
     for index in other_indexes: 
@@ -83,6 +83,14 @@ def stock_search(experiment_info_dict, unfiltered_wtfs, stock_canidates_samples,
     for i, stock_canidate_sample in enumerate(stock_canidates_samples):
         stock_text_list[i].append('Index = ' + str(i))
         graph_canidates(experiment_info_dict, wtf_sample_canidates, stock_canidate_sample, additional_text = stock_text_list[i])
+        
+def stock_search_sep(stock_dict, experiment_csv_dict, unfiltered_wtfs): 
+    stock_canidates_samples = stock_dict['stocks_wtf_lists']
+    stock_text_list = stock_dict['stock_text_info']
+
+    for i, stock_canidate_sample in enumerate(stock_canidates_samples):
+        stock_text_list[i].append('Index = ' + str(i))
+        graph_canidates(experiment_csv_dict, unfiltered_wtfs, stock_canidate_sample, additional_text = stock_text_list[i])
         
 def baseline_correction(df_samples, baseline_series): 
     """Given the series iloc of a the blank, subtracts the value at every wavelength of blank at resp. wavelength. 
@@ -125,3 +133,21 @@ def plot_single_wavelength(dataframe, wavelength):
     
     return absorbances
 
+def plot_wavelengths_zoom(dataframe, labels, x_lim = [], y_lim = []):
+    """Given a dataframe with the wavelegnth information as one row will plot and will zoom based on provided axis"""
+    fig, ax = plt.subplots()
+    for i, (key, row) in enumerate(dataframe.iterrows()):
+        if key == 'Wavelength':
+            x = row
+        else: 
+            y = row
+            ax.plot(x,y,label = labels[i])
+    ax.legend()
+    
+    plt.xlabel('Wavelength nm')
+    if len(x_lim) == 2:
+        plt.xlim(x_lim)
+    
+    plt.ylabel('Absorbance')
+    if len(y_lim) == 2:
+        plt.ylim(y_lim)
