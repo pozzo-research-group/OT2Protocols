@@ -25,10 +25,14 @@ OT2 Sample Labware Start,0
 OT2 Stock Labware,"""corning_96_wellplate_360ul_flat"""
 OT2 Stock Labware Slot,"""1"""
 OT2 Stock Labware Stock Position,"[1,2,3,4,5]"
-OT2 Left Pipette,"""p300_single"""
+OT2 Left Pipette,"""p300_single_gen2"""
+OT2 Left Pipette Aspiration Rate (uL/sec),150
+OT2 Left Pipette Dispense Rate (uL/sec),300
 OT2 Left Tipracks,"[""opentrons_96_tiprack_300ul"", ""opentrons_96_tiprack_300ul""]"
 OT2 Left Tiprack Slots,"[""10"", ""7""]"
 OT2 Right Pipette,"""p1000_single"""
+OT2 Right Pipette Aspiration Rate (uL/sec),500
+OT2 Right Pipette Dispense Rate (uL/sec),1000
 OT2 Right Tipracks,"[""opentrons_96_tiprack_1000ul"", ""opentrons_96_tiprack_1000ul""]"
 OT2 Right Tiprack Slots,"[""11"",""8""]"
 OT2 Bottom Dispensing Clearance (mm),30
