@@ -41,7 +41,8 @@ def graph_canidates(experiment_csv_dict, unfiltered, filtered, additional_text =
                 wtf_filtered_rearranged[y_index], 
                 marker_size, alpha = 0.5, marker = 'o', color = 'r')
 
-
+#     plt.plot([0,1],[0,0.02])
+    
     plt.xlabel(x_component_name + ' wtf')
     plt.ylabel(y_component_name + ' wtf')
     

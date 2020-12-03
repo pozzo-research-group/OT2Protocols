@@ -238,7 +238,7 @@ def check_volumes(sample, min_vol, max_vol):
     "Checks a sample to see if it contains any volumes outside of the provided min/max. For use in case of wanting to limit the amount of steps in sample creation or adhering to OT2 pipette restrictions."
     checker = []
     for vol in sample:
-        if vol >= min_vol and vol <= max_vol:
+        if vol >= min_vol and vol <= max_vol or vol==0:
             checker.append(1)
         else:
             checker.append(0)
