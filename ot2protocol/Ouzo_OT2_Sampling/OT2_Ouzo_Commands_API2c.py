@@ -1,4 +1,4 @@
-def create_samples(protocol, experiment_dict, sample_volumes, transfer = False):
+def create_samples(protocol, experiment_dict, sample_volumes, transfer = False, custom_labware_dict = {}):
     """A function which uses a protocol object from the OT2 API V2 module which along with calculated and rearranged volumes
     will produce commands for the OT2. Additionally, information regarding the wells, slot and labware in use will be returned 
     for use in information storage. Volume argument must be rearranged component wise (i.e. a total of n component lists should be fed). 
@@ -24,7 +24,7 @@ def create_samples(protocol, experiment_dict, sample_volumes, transfer = False):
     
     dest_plates = [] # labware objects
     for name, slot in zip(dest_plate_names, dest_plate_slots):
-        dest_plate_i = protocol.load_labware(name, slot)
+        dest_plate_i = custom_or_native_labware(protocol, name, slot, custom_labware_dict)
         dest_plates.append(dest_plate_i)
     
     dest_wells_row_order = [] # first order list of wells in order of labwares (row ordering)
@@ -56,12 +56,13 @@ def create_samples(protocol, experiment_dict, sample_volumes, transfer = False):
     
     right_tipracks = []
     for name, slot in zip(right_tiprack_names, right_tiprack_slots):
-        right_tiprack_i = protocol.load_labware(name, slot) 
+        right_tiprack_i = custom_or_native_labware(protocol, name, slot, custom_labware_dict)
         right_tipracks.append(right_tiprack_i)
             
     left_tipracks = []
     for name, slot in zip(left_tiprack_names, left_tiprack_slots):
-        left_tiprack_i = protocol.load_labware(name, slot)
+        left_tiprack_i = custom_or_native_labware(protocol, name, slot, custom_labware_dict)
+        (name, slot)
         left_tipracks.append(left_tiprack_i)
 
     right_pipette = protocol.load_instrument(experiment_dict['OT2 Right Pipette'], 'right', tip_racks = right_tipracks)
@@ -84,7 +85,7 @@ def create_samples(protocol, experiment_dict, sample_volumes, transfer = False):
         pipette_1 = right_pipette 
         pipette_2 = left_pipette
       
-    stock_plate = protocol.load_labware(experiment_dict['OT2 Stock Labware'], experiment_dict['OT2 Stock Labware Slot'])
+    stock_plate = custom_or_native_labware(protocol, experiment_dict['OT2 Stock Labware'], experiment_dict['OT2 Stock Labware Slot'], custom_labware_dict)
     stock_plate_rows = [well for row in stock_plate.rows() for well in row]
     
     info_list = []
@@ -130,7 +131,7 @@ def create_samples(protocol, experiment_dict, sample_volumes, transfer = False):
         # Setting up list of trasnfer destination labwares in order to create final row ordered list of labware wells
         transfer_dest_labwares = []
         for name, slot in zip(transfer_dest_labware_names, transfer_dest_labware_slots):
-            transfer_dest_labware = protocol.load_labware(name, slot)
+            transfer_dest_labware = custom_or_native_labware(protocol, name, slot, custom_labware_dict)
             transfer_dest_labwares.append(transfer_dest_labware)
         
         transfer_dest_wells = []
@@ -169,12 +170,12 @@ def simple_independent_transfer(protocol, experiment_dict):
     
     right_tipracks = []
     for name, slot in zip(right_tiprack_names, right_tiprack_slots):
-        right_tiprack_i = protocol.load_labware(name, slot) 
+        right_tiprack_i = custom_or_native_labware(protocol, name, slot, custom_labware_dict) 
         right_tipracks.append(right_tiprack_i)
             
     left_tipracks = []
     for name, slot in zip(left_tiprack_names, left_tiprack_slots):
-        left_tiprack_i = protocol.load_labware(name, slot)
+        left_tiprack_i = custom_or_native_labware(protocol, name, slot, custom_labware_dict)
         left_tipracks.append(left_tiprack_i)
 
     right_pipette = protocol.load_instrument(experiment_dict['OT2 Right Pipette'], 'right', tip_racks = right_tipracks)    
@@ -204,12 +205,12 @@ def simple_independent_transfer(protocol, experiment_dict):
     
     transfer_source_labwares = []
     for name, slot in zip(transfer_source_labware_names, transfer_source_labware_slots):
-        transfer_source_labware = protocol.load_labware(name, slot)
+        transfer_source_labware = custom_or_native_labware(protocol, name, slot, custom_labware_dict)
         transfer_source_labwares.append(transfer_source_labware)
     
     transfer_dest_labwares = []
     for name, slot in zip(transfer_dest_labware_names, transfer_dest_labware_slots):
-        transfer_dest_labware = protocol.load_labware(name, slot)
+        transfer_dest_labware = custom_or_native_labware(protocol, name, slot, custom_labware_dict)
         transfer_dest_labwares.append(transfer_dest_labware)
     
     transfer_source_wells = []
@@ -245,3 +246,10 @@ def simple_independent_transfer(protocol, experiment_dict):
 
     for line in protocol.commands():
         print(line)
+
+def custom_or_native_labware(protocol, labware_name, labware_slot, custom_labware_dict):
+    if labware_name in custom_labware_dict:
+        loaded_labware = protocol.load_labware_from_definition(custom_labware_dict[labware_name], labware_slot)
+    else: 
+        loaded_labware = protocol.load_labware(labware_name, labware_slot)     
+    return loaded_labware

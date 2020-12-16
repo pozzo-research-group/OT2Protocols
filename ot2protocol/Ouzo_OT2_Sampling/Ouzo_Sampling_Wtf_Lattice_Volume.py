@@ -234,8 +234,20 @@ def calculate_ouzo_volumes(sample_canidate_list, experiment_csv_dict, searching 
         sample_stock_volumes.append(np.asarray(stock_volumes)*1000) # converted to uL
     return np.asarray(sample_stock_volumes)
                 
-def check_volumes(sample, min_vol, max_vol):
+def check_volumes(sample, min_vol, max_vol = None):
     "Checks a sample to see if it contains any volumes outside of the provided min/max. For use in case of wanting to limit the amount of steps in sample creation or adhering to OT2 pipette restrictions."
+#     if max_vol = False:
+#         checker = []
+#         for vol in sample:
+#             if vol >= min_vol and vol <= max_vol or vol==0:
+#                 checker.append(1)
+#             else:
+#                 checker.append(0)
+#         if sum(checker) == len(sample):
+#             return True
+#         else:
+#             return False
+    
     checker = []
     for vol in sample:
         if vol >= min_vol and vol <= max_vol or vol==0:
@@ -247,24 +259,22 @@ def check_volumes(sample, min_vol, max_vol):
     else:
         return False
 
-def filter_samples(sample_canidates, volume_sample_canidates, min_vol, max_vol):
+def filter_samples(wtf_samples_canidates, volume_sample_canidates, min_vol, max_vol):
     """Filters samples based on volume restriction and matches up with previously created wtf sample canidates, 
     returning an updated list of wtf canidates AND volume canidates"""
+    
     filtered_volumes = []
     filtered_wtf = []
     filtered_out = [] # optional just add an append in an else statement
-    for sample_wtfs, sample_vols in zip(sample_canidates, volume_sample_canidates):
-        if check_volumes(sample_vols, min_vol, max_vol) == True:
+    
+    for sample_wtfs, sample_vols in zip(wtf_samples_canidates, volume_sample_canidates):
+        if check_volumes(sample_vols, min_vol, max_vol) == True: # could say samples_vols[:-1], essentially two checks at once, check from sample_vols[:-1] if min_vol, max_vol =optional - change in funtion, and also if samples_vols[-1] 
             filtered_volumes.append(sample_vols)
             filtered_wtf.append(sample_wtfs)
     
     volume_checking_list = [sum(volume) for volume in filtered_volumes]
     min_sample_volume = min(volume_checking_list)
     max_sample_volume = max(volume_checking_list)
-    
-    
-#     print('Min sample volume = ' + str(min_volume) + 'uL', 
-#           'Max sample volume = ' + str(max_volume) + 'uL')
     
 
     return (filtered_wtf, filtered_volumes, min_sample_volume, max_sample_volume)
@@ -285,6 +295,9 @@ def experiment_sample_dict(experiment_plan_path, min_input_volume, max_input_vol
     experiment_plan_dict = get_experiment_plan(experiment_plan_path)
     wtf_sample_canidates = generate_candidate_lattice_concentrations(experiment_plan_dict, filter_one=filter_sum_one)
     volume_sample_canidates = calculate_ouzo_volumes(wtf_sample_canidates, experiment_plan_dict)
+    
+    # now filter volume min no max for all but water, but min and max for water - but should not have to input volume should just be based on pipettes
+    
     filtered_wtf_samples, filtered_volume_samples, min_sample_volume, max_sample_volume = filter_samples(wtf_sample_canidates, volume_sample_canidates, min_input_volume, max_input_volume)
     
     experiment_info_dict = {'experiment_plan_dict': experiment_plan_dict,
