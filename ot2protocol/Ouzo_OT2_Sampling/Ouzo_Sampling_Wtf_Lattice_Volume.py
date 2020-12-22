@@ -8,6 +8,20 @@ import datetime
 from pytz import timezone
 import csv
 
+"""Common terms/info: 
+    wtf = weight fraction
+    2D list or nested list = [[a,b,c], [e,f,g]]
+    
+    Unless otherwise stated:
+    - The order of list or array should be assumed to match that of its naming list or arrays. For example if stock_concentrations = [0.1, 0.5, 1] with stock_names = [A, B, C], stock_unit = ['wtf', 'wtf', 'wtf'] then stock A = 1 wtf, B = 0.5 wtf and so on.
+    - Volumes are defaulted to microliters (default unit of opentrons) 
+    
+
+    
+    Other notes: 
+       - Currently each component has its own respective stock that only has most one solvent. Working on modifying the component logic to allow for automatic search of components and match them with respective stock, issue I can already see arising is when one component is present in more than one stock how to assign proirity. 
+    
+    """
 
 def get_experiment_plan(filepath):
     """
@@ -23,7 +37,7 @@ def get_experiment_plan(filepath):
     return plan_dict
 
 def sample_sum_filter(sample_list):
-    "Filters list of sample candidates on the basis of summation to 1, if less than 1 completes by adding remaining element to end of array, while if more than one removes entry."
+    "Filters 2D list or nested list of sample wtf candidates on the basis of summation to 1, if the summation is less than 1 it completes by adding remainder as an element to the end of the array, while if more than one it removes entry completely."
     filtered_samples = []
     for sample in sample_list:
         concentration_sum = sum(sample)
@@ -33,37 +47,33 @@ def sample_sum_filter(sample_list):
             filtered_samples.append(filled_sample)     
     return np.asarray(filtered_samples)
 
-def generate_candidate_lattice_concentrations(experiment_csv_dict, stocks = False, filter_one = True):
-    """Given n component linspaces of equivalent concentration units which summmation equal one (i.e. volf or wtf), generates an array of component concentration candidates which is subsequently filtered"""
+def generate_candidate_lattice_concentrations(experiment_csv_dict, filter_one = True):
+    """Given the complete csv dictionary of instruction, uses the n component linspaces of equivalent concentration units which summmation equal one (i.e. volf or wtf). The number of linspaces used are to equal the total number of components - 1. Once a 2D list of component concentration candidates are generated the canidates (of length total # of components - 1) are subsequently filtered/completed by sample_sum_filter. All entry additions follow the order of linspaces from the experiment_csv_dict."""
     
-    component_list = experiment_csv_dict['Component Shorthand Names']
-    component_concs_list = experiment_csv_dict['Component Concentrations [min, max, n]']
+    # Calling information from csv 
+    component_name_list = experiment_csv_dict['Component Shorthand Names']
+    component_conc_linspaces_list = experiment_csv_dict['Component Concentrations [min, max, n]']
     component_conc_type_list = experiment_csv_dict['Component Concentration Unit']
-    
-    component_conc_dict = {}
-    conc_range_list = []
-    spacing_type = experiment_csv_dict['Component Spacing']
-
-    for conc_range in component_concs_list:
-        if spacing_type == "linear":
-            conc_range_list.append(np.linspace(*conc_range))
-        elif spacing_type == "log":
-            # To do:
-            # Handle cases where concentration = 0
-            conc_range_list.append(np.logspace(*conc_range))
+    component_spacing_type = experiment_csv_dict['Component Spacing']
+ 
+    conc_range_list = [] # will hold flattened linspaces 
+    for conc_linspace in component_conc_linspaces_list:
+        if component_spacing_type == "linear":
+            conc_range_list.append(np.linspace(*conc_linspace))
+        elif component_spacing_type == "log": # allows for cases where conc is 0? 
+            conc_range_list.append(np.logspace(*conc_linspace))
         else:
             type_list = ["linear", "log"]
             assert spacing_type in type_list, "spacing_type was not specified in the experiment plan, or the the rquested method is not implemented."
         
-    conc_grid = np.meshgrid(*conc_range_list)# Create every combination with meshgrid.
+    conc_grid = np.meshgrid(*conc_range_list) # Create every combination of the flattened linspaces with meshgrid.
     
+    component_conc_dict = {}
     for i in range(len(conc_grid)): 
-        # Create concentration entry in dictionary,
-        # key:value = component name: flattened list of concentrations
-        component_name = component_list[i]
+        component_name = component_name_list[i]
         component_conc_dict[component_name] = conc_grid[i].ravel()
     concentration_df = pd.DataFrame.from_dict(component_conc_dict)
-    assert len(component_list) != len(component_concs_list), "The provided experimental instructions are overspecified."
+    assert len(component_name_list) != len(component_conc_linspaces_list), "The provided experimental instructions are overspecified."
 
     concentration_array = concentration_df.values
     
@@ -74,47 +84,64 @@ def generate_candidate_lattice_concentrations(experiment_csv_dict, stocks = Fals
         
     return concentration_array
 
+# need to add catchers here when filtering- so in reality just the sum thing 
 def generate_candidate_lattice_stocks(experiment_csv_dict):
-    stock_list = experiment_csv_dict['Stock Names']
-    stock_concs_list = experiment_csv_dict['Stock Concentration [min, max, n]']
+    """Mirror of function generate_candidate_lattice_concentrations expect for the case of looking through multiple stocks and creating combinations of stock concentrations from the csv provided stock concentration linspaces. The major diffierences is the lack of optional 0 concentration handling and unity filter as the concentrations of stocks are independent from on another unlike the concentrations of a components in a singular sample. Returns a 2D array of stock concnetration combinations. Again 1D order is order of stock name and linspace."""
+    
+    stock_name_list = experiment_csv_dict['Stock Names']
+    stock_concs_linspaces_list = experiment_csv_dict['Stock Search Concentrations [min, max, n]']
     stock_conc_type_list = experiment_csv_dict['Stock Concentration Units']
-    stock_conc_dict = {}
+    
     stock_ranges_list = []
 
-    for stock_range in stock_concs_list:
+    for stock_range in stock_concs_linspaces_list:
         stock_ranges_list.append(np.linspace(*stock_range))
-
+        
     conc_grid = np.meshgrid(*stock_ranges_list)
-
+    
+    stock_conc_dict = {}
     for i in range(len(conc_grid)): 
-        # Create concentration entry in dictionary,
-        # key:value = component name: flattened list of concentrations
-        stock_name = stock_list[i]
+        stock_name = stock_name_list[i]
         stock_conc_dict[stock_name] = conc_grid[i].ravel()
-    concentration_df = pd.DataFrame.from_dict(stock_conc_dict)
+    stock_concentration_df = pd.DataFrame.from_dict(stock_conc_dict)
 
-    concentration_array = concentration_df.values
+    stock_concentration_array = stock_concentration_df.values # MOD: is this an actual array? change to np.asarray and test
 
-    return concentration_array
+    return stock_concentration_array
 
-def prepare_stock_search(stock_canidates, experiment_csv_dict, wtf_sample_canidates, min_vol, max_vol):
+def prepare_stock_search(stock_canidates, experiment_csv_dict, wtf_sample_canidates, min_instrument_vol, max_instrument_vol):
+    """
+    Used to create a dictionary containing volume and fractional concnetration (currently only wtf and not volf notation wise) of sample canidates which are based on a groups of stock canidates. Also provides useful information in the stock_text_list entry like which stock combination was used and the number of samples possible with the specfic stock combination and concentration canidates. Essentially this runs through the process of creating a bunch of plausible cases given the single component canidates with the each of the previously created stock combination canidates. 
+    
+    Stock_canidates is a 2D array of stock_canidates provided from generate_candidate_lattice_stocks
+    wtf_sample_canidates is the 2D array of wtf_canidates provided from generate_candidate_lattice
+    max/min_instrument_vol is the max/min volume to be used by current instrumentation (this will change with instrumentation)
+    
+    """
+    
     stock_names = experiment_csv_dict['Stock Names']
     stock_units = experiment_csv_dict['Stock Concentration Units']
     
     filtered_wtf_list = []
     filtered_volumes_list = []
     stock_text_list = []
+    
     for stock_canidate in stock_canidates:
-        volume_canidates = calculate_ouzo_volumes(wtf_sample_canidates, experiment_csv_dict, searching=True, searching_stock_concentrations=stock_canidate)
-        filtered_wtf_samples, filtered_volumes_samples, min_sample_volume, max_sample_volume = filter_samples(wtf_sample_canidates, volume_canidates, min_vol, max_vol)
+        
+        volume_canidates = calculate_ouzo_volumes(wtf_sample_canidates, experiment_csv_dict, stock_searching=True, stock_searching_concentration=stock_canidate) # note the searching option here is important as we want to use a stock candiate from the stock_canidates_list rather than from the csv directly. ATM once you make your actual stocks you will need to go into the csv and change the "Stock Final Concentrations", it is not an input in a python cell as it needs to recorded down somewhere permanent like the csv instructions. 
+        
+        filtered_wtf_samples, filtered_volumes_samples, min_sample_volume, max_sample_volume = filter_samples(wtf_sample_canidates, volume_canidates, min_instrument_vol, max_instrument_vol)
+        
         filtered_wtf_list.append(filtered_wtf_samples)
         filtered_volumes_list.append(filtered_volumes_samples)
         
         stock_text = ['', 'Stock Information']
         
-        for i, stock_name in enumerate(stock_names):
+        for i, stock_name in enumerate(stock_names): # adding information on which stock was used
             additional_stock_text = stock_name + ' ' + str(stock_canidate[i]) + ' ' + stock_units[i]
             stock_text.append(additional_stock_text) 
+        
+        # adding information of what resulted from using this specfic stock
         stock_text.append('Number of samples = ' + str(len(filtered_wtf_samples)))
         stock_text.append('Miniumum Sample Volume =' + str(min_sample_volume) + 'uL')
         stock_text.append('Maximum Sample Volume =' + str(min_sample_volume) + 'uL')
@@ -126,20 +153,11 @@ def prepare_stock_search(stock_canidates, experiment_csv_dict, wtf_sample_canida
   
     return prepare_stock_dict
 
-# def prepare_stock_search_wrap(experiment_info_dict): 
-#     min_vol = experiment_info_dict['Minimum Sample volume (uL)']
-#     max_vol = experiment_info_dict['Maximum Sample volume (uL)']
-#     experiment_csv_dict = experiment_info_dict['experiment_plan_dict']
-#     wtf_sample_canidates = experiment_info_dict['wtf_sample_canidates']
-#     stock_concnetrations_array = generate_candidate_lattice_stocks(experiment_csv_dict)
-#     filtered_stock_concentrations, stock_text, min_sample_vol, max_sample_vol = prepare_stock_search(stock_concnetrations_array, experiment_csv_dict, wtf_sample_canidates, min_vol, max_vol)
-    
-#     stock_search_dict = {'Stock Concentrations': filtered_stock_concentrations, 'Stock Text': stock_text}
-#     return stock_search_dict
 
-
-def ethanol_wtf_water_to_density(ethanol_wtf):
+def ethanol_wtf_water_to_density(ethanol_wtf): # MOD 
     """Converts wtf of ethanol in a binary mixture with water to density using a polyfit of 4. The results are mainly used in the calculation of volume from a weight fraction. UPDATE: need to cite or create potential user entry."""
+    
+    # Current information pulled from NIST T = @ 25C
     ethanol_wtfs = np.asarray([x for x in range(101)])/100
     ethanol_water_densities = np.asarray([0.99804, 0.99636, 0.99453, 0.99275, 0.99103, 0.98938, 0.9878, 0.98627, 0.98478 , 0.98331 , 0.98187, 0.98047, 0.9791, 0.97775, 0.97643, 0.97514, 0.97387, 0.97259, 0.97129, 0.96997, 0.96864, 0.96729, 0.96592, 0.96453, 0.96312, 0.96168, 0.9602, 0.95867, 0.9571, 0.95548, 0.95382, 0.95212, 0.95038, 0.9486, 0.94679 ,0.94494, 0.94306, 0.94114, 0.93919, 0.9372, 0.93518, 0.93314, 0.93107, 0.92897, 0.92685, 0.92472, 0.92257, 0.92041, 0.91823, 0.91604, 0.91384, 0.9116, 0.90936, 0.90711, 0.90485, 0.90258, 0.90031, 0.89803, 0.89574, 0.89344, 0.89113, 0.88882, 0.8865, 0.88417, 0.88183, 0.87948, 0.87713, 0.87477, 0.87241, 0.87004, 0.86766, 0.86527, 0.86287, 0.86047, 0.85806, 0.85564, 0.85322, 0.85079, 0.84835, 0.8459, 0.84344, 0.84096, 0.83848, 0.83599, 0.83348, 0.83095, 0.8284, 0.82583, 0.82323, 0.82062, 0.81797, 0.81529, 0.81257, 0.80983, 0.80705, 0.80424, 0.80138, 0.79846, 0.79547, 0.79243, 0.78934])   # another way is to use only wtf or state the molarity is calculated as sums of the volumes and not the final volume 
     coeffs = np.polyfit(ethanol_wtfs, ethanol_water_densities,4)
@@ -147,19 +165,19 @@ def ethanol_wtf_water_to_density(ethanol_wtf):
     return fit
 
 
-def mg_per_mL_to_molarity(mg_per_mL, mw):
-    molarity = mg_per_mL/mw
-    return(molarity)
+########### Stopped here in updating documentation, other task: create a csv templete explaining each variables and the format on how it should be input, fix the issue of order of operations, fix the ability to only restrict some component/stocks from having an upper limit of volume, add the the ability to use mutliple stocks to create more dilute/more possible samples. 
 
-def average_volume(sample_volumes):
-    tak = []
-    for i in sample_volumes:
-        tak.append(np.average(i))
-    tak = np.asarray(tak)
-    average_vol = np.average(tak)
-    return average_vol
+# def mg_per_mL_to_molarity(mg_per_mL, mw):
+#     molarity = mg_per_mL/mw
+#     return(molarity)
 
-def add_blank(sample_wtfs, sample_volumes, blank_total_volume, blank_component_wtfs):
+def add_blank_sample(sample_wtfs, sample_volumes, blank_total_volume, blank_component_wtfs):
+    """Allows for the addition of a blank sample at the end of both the concentration and volume arrays that one has selected for experimentation, returns both arrays. Blank units and order of components assumed to the same as those of other samples. Blank total volume left as non-csv-dependent input as this could change with the selected stock conidate/experiment conditions and is up to the user to decide which is the most appropiate.
+    
+    CSV Information: 
+    - blank_component_wtfs = 'Blank Component Concentrations (wtfs)' 
+   """
+    
     blank_component_volumes = []
     for component_composition in blank_component_wtfs:
         volume = component_composition*blank_total_volume
@@ -170,9 +188,20 @@ def add_blank(sample_wtfs, sample_volumes, blank_total_volume, blank_component_w
     blank_and_sample_volumes = np.concatenate((sample_volumes, blank_volume_array))
     return blank_and_sample_wtfs, blank_and_sample_volumes
     
+
     
-def calculate_ouzo_volumes(sample_canidate_list, experiment_csv_dict, searching = False, searching_stock_concentrations = None):
-    """Given stock and component information alongside selected sample canidates will provide volume for OT2 in microliters. All intermediate calculation volumes are assumed to in milliliters unless stated otherwise. Component order to match order of sample concentration in sample canidate list. Additionally, assumes the good solvent for all other components is the second to last in component list and the poor solvent is last. """
+# when calculating volumes need to add "catchers" to allow user to be informed of why search/exe failed (not enough of component b, volume to small etc..)    
+def calculate_ouzo_volumes(sample_canidate_list, experiment_csv_dict, stock_searching = False, stock_searching_concentration = None):
+    """Given the concentration information along with stock information either directly from the csv or inputted manually (stock searching) will calculate the required volume for each stock to create a given sample. All order is preserved in terms of the samples position in the new volume list and the stock positions. For example: 
+    - selected_stock_concentration = [0.1, 0.3]
+    - selected_sample_concentrations = [[0.02, 0.20], [0.05, 0.87]]
+    - output = [[volume of 0.1 stock, volume of 0.3 stock], [volume of 0.1 stock, volume of 0.3 stock]] 
+    ! should change notation to stock_volumes instead of sample volumes makes it confusion 
+    
+    All intermediate calculation volumes are assumed to in milliliters unless stated otherwise. <- check and label these as not clear
+    
+    """
+    
     total_sample_mass = experiment_csv_dict['Sample Mass (g)']
     component_names = experiment_csv_dict['Component Shorthand Names']
     component_units = experiment_csv_dict['Component Concentration Unit']
@@ -181,10 +210,10 @@ def calculate_ouzo_volumes(sample_canidate_list, experiment_csv_dict, searching 
     component_sol_densities = experiment_csv_dict['Component Solution vol to wt density (g/mL)']
     stock_names = experiment_csv_dict['Stock Names']
     
-    if searching == True:
-        stock_concentrations = searching_stock_concentrations
+    if stock_searching == True:
+        stock_concentrations = stock_searching_concentration
     else: 
-        stock_concentrations = experiment_csv_dict['Stock Concentration'] # OOH NO CAN DO A SINGLE ONE BUT USE THIS SPECIFIC NAMING CONVENTION
+        stock_concentrations = experiment_csv_dict['Stock Final Concentrations']
         
     stock_concentrations_units = experiment_csv_dict['Stock Concentration Units']
     stock_components_list = experiment_csv_dict['Stock Components']
@@ -194,7 +223,7 @@ def calculate_ouzo_volumes(sample_canidate_list, experiment_csv_dict, searching 
     for sample in sample_canidate_list: 
         total_good_solvent_wtf = sample[good_solvent_index]
         total_good_solvent_mass = total_sample_mass*total_good_solvent_wtf
-        total_good_solvent_volume = total_good_solvent_mass*ethanol_wtf_water_to_density(total_good_solvent_wtf)
+        total_good_solvent_volume = total_good_solvent_mass*ethanol_wtf_water_to_density(total_good_solvent_wtf) # why is volume being used, should not everything be in mass then at the end just converted. 
         stock_volumes = []
         component_volumes = []
 
@@ -234,23 +263,16 @@ def calculate_ouzo_volumes(sample_canidate_list, experiment_csv_dict, searching 
         sample_stock_volumes.append(np.asarray(stock_volumes)*1000) # converted to uL
     return np.asarray(sample_stock_volumes)
                 
-def check_volumes(sample, min_vol, max_vol = None):
-    "Checks a sample to see if it contains any volumes outside of the provided min/max. For use in case of wanting to limit the amount of steps in sample creation or adhering to OT2 pipette restrictions."
-#     if max_vol = False:
-#         checker = []
-#         for vol in sample:
-#             if vol >= min_vol and vol <= max_vol or vol==0:
-#                 checker.append(1)
-#             else:
-#                 checker.append(0)
-#         if sum(checker) == len(sample):
-#             return True
-#         else:
-#             return False
+def check_volumes(sample, min_instrument_vol, max_instrument_vol = None):
+    """Checks a 1D array (in this case the stock volumes of one sample) to see if it contains any volumes outside of the provided min/max of the instrumentation. The only case allowed outside of these min/max bounds is the case of the instrument pipetting no volume or zero volume. For use in case of wanting to limit the amount of steps in sample creation or adhering to OT2 pipette restrictions.
     
+    Used as an intermediate step when filtering large amount of samples through the function - filter_samples. 
+    
+    """
+
     checker = []
     for vol in sample:
-        if vol >= min_vol and vol <= max_vol or vol==0:
+        if vol >= min_instrument_vol and vol <= max_instrument_vol or vol==0: # zero added in the case of no volume
             checker.append(1)
         else:
             checker.append(0)
@@ -280,7 +302,10 @@ def filter_samples(wtf_samples_canidates, volume_sample_canidates, min_vol, max_
     return (filtered_wtf, filtered_volumes, min_sample_volume, max_sample_volume)
     
 def rearrange(sample_volumes):
-    """Rearranges sample information to group samples based on position in sublist. [[a1,b1,c1],[a2,b2,c2]] => [[a1,a2],[b1,b2],[c1,c2]]"""
+    """Rearranges sample information to group samples based on position in sublist. [[a1,b1,c1],[a2,b2,c2]] => [[a1,a2],[b1,b2],[c1,c2]]. This is used in order to prepare stock volumes to be use in Opentrons volume commmands
+    
+    
+    """
     component_volumes_rearranged = []
     for i in range(len(sample_volumes[0])): 
         component_volumes = []
@@ -291,7 +316,7 @@ def rearrange(sample_volumes):
     return component_volumes_rearranged 
 
 def experiment_sample_dict(experiment_plan_path, min_input_volume, max_input_volume, filter_sum_one = True): 
-    """A wrapper for functions required to create ouzo samples, where final information is presented in returned dictionary."""
+    """A wrapper for functions required to create ouzo samples, where final information is presented in returned dictionary. EXPLAIN THE WALKTHROUGH OF THIS STEP BY STEP ALLOWING SOMEONE TO FOLLOW  """
     experiment_plan_dict = get_experiment_plan(experiment_plan_path)
     wtf_sample_canidates = generate_candidate_lattice_concentrations(experiment_plan_dict, filter_one=filter_sum_one)
     volume_sample_canidates = calculate_ouzo_volumes(wtf_sample_canidates, experiment_plan_dict)
@@ -309,11 +334,13 @@ def experiment_sample_dict(experiment_plan_path, min_input_volume, max_input_vol
                            'Maximum Sample volume (uL)': max_sample_volume}
     return experiment_info_dict
 
+
+# WHAT IS THIS???
 def calculate_stock_volumes(experiment_csv_dict, sample_volumes):
     rearranged_by_component_volumes = rearrange(sample_volumes)
     summed_stock_volumes = [sum(stock_volumes) for stock_volumes in rearranged_by_component_volumes]
     stock_names = experiment_csv_dict['Stock Names']
-    stock_concentrations = experiment_csv_dict['Stock Concentration']
+    stock_concentrations = experiment_csv_dict['Stock Final Concentrations']
     stock_units = experiment_csv_dict['Stock Concentration Units']
     
     
