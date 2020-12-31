@@ -1,3 +1,22 @@
+import glob # these are fine since simple and native to python loaded on opentrons, but avoid using any large modules like matplotlib as unable to load onto raspi on ot2. 
+import os
+import json
+
+def custom_labware_dict(labware_dir_path): # make it so it redirects back to original path
+    """Given the path of a folder of custom labware .json files will create dict
+    of key = name and value = labware definition to be loaded using protocol.load_labware_from_definition 
+    versus typical protocol.load_labware"""
+    original_working_dir = os.getcwd()
+    os.chdir(labware_dir_path) # instead of changing the dir entirely can one not just a with or a read?
+    labware_dict = {}
+    for file in glob.glob("*.json"):
+        with open(file) as labware_file:
+            labware_name = os.path.splitext(file)[0] # removes the .json extnesion
+            labware_def = json.load(labware_file)
+            labware_dict[labware_name] = labware_def
+    os.chdir(original_working_dir)
+    return labware_dict 
+
 def create_samples(protocol, experiment_dict, sample_volumes, transfer = False, custom_labware_dict = {}):
     """A function which uses a protocol object from the OT2 API V2 module which along with calculated and rearranged volumes
     will produce commands for the OT2. Additionally, information regarding the wells, slot and labware in use will be returned 
