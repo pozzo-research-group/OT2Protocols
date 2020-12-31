@@ -1,29 +1,31 @@
 Protocol Version,"""2.0"""
 Experimenter,"""Edwin Antonio"""
-Project Tag,"""Ethanol and PFH Scan"""
-Experiment Tag,"""Experiment 1 Trial 1"""
-Sample Mass (g),0.7
-Component Shorthand Names,"[ 'dppc', 'dspe-peg', 'PFH', 'ethanol' , 'water']"
+Project Tag,"""Sonication Station Oil Scan"""
+Experiment Tag,"""Dec 12 31 Experiment 1"""
+Sample Amount,10
+Sample Unit,"""mL"""
 Component Good Solvent Index (Only Ouzo),4
 Component Poor Solvent Index (Only Ouzo),5
-Component Density (g/mL),"[1, 1, 1.67, 0.79, 1]"
-Component MW (g/mol),"[734.04, 2805.5, 41.07, 323, 1]"
-Component Concentration Unit,"['wtf', 'wtf', 'wtf', 'wtf', 'wtf']"
-Component Solution vol to wt density (g/mL),"[0.79,0.79,'NA','NA','NA']"
-Component Graphing X Index,3
-Component Graphing Y Index,2
+Component Shorthand Names,"['Precursor 1',  'Precursor 2', 'Ethylene glycol']"
+Component Density (g/mL),"['NA', 'NA', 1.113]"
+Component MW (g/mol),"['NA', 'NA', 62.07]"
+Component Concentration Unit,"['volf', 'volf', 'volf']"
+Component Solution vol to wt density (g/mL),"['NA','NA', 'NA']"
+Component Graphing X Index,0
+Component Graphing Y Index,1
 Component Spacing,"""linear"""
-Blank Component Concentrations (wtfs),"[0,0,0,0,1]"
-"Component Concentrations [min, max, n]","[[0.00030, 0.00030,1], [1.25e-4,1.25e-4,1], [1e-5, 0.6e-2,40],[0.3, 0.6, 45]] "
-Stock Names,"['dppc-stock', 'dspe-peg-stock', 'ethanol-PFH-Stock','ethanol-stock', 'water-stock' ]"
-Stock Concentration Units,"[ 'molarity','molarity','wtf', 'wtf','wtf']"
-"Stock Concentration [min, max, n]","[[0.002724647, 0.002724647,1], [0.000356443,0.000356443, 1], [0.005, 0.020,8] , [1,1,1], [1,1,1]]"
-Stock Concentration,"[0.002724647,0.000356443,0.0149199,1,1]"
-Stock Appx Density (g/mL),"[0.79, 0.79, 0.79, 0.79, 1]"
+Blank Component Concentrations (wtfs),"[0,0.3, 0.7]"
+"Component Concentrations [min, max, n]","[[0, 1,10], [0,1,5]]"
+Stock Names,"['precursor1-stock', 'precursor2-stock', 'ethylene-glycol-stock']"
+Stock Concentration Units,"[ 'volf', 'volf', 'volf']"
+"Stock Search Concentrations [min, max, n]",['NA']
+Final Selected Stock Concentrations,"[1,1,1]"
+Stock Appx Density (g/mL),"['NA', 'NA']"
+OT2 Stock Dispensing Order,"[1,2,3]"
 OT2 Destination Labwares,"[""corning_96_wellplate_360ul_flat"", ""corning_96_wellplate_360ul_flat"",""corning_96_wellplate_360ul_flat""]"
 OT2 Destination Labware Slots,"[""2"",""3"",""4""]"
 OT2 Sample Labware Start,0
-OT2 Stock Labware,"""20mlscintillation_12_wellplate_18000ul"""
+OT2 Stock Labware,"""corning_96_wellplate_360ul_flat"""
 OT2 Stock Labware Slot,"""1"""
 OT2 Stock Labware Stock Position,"[1,2,3,4,5]"
 OT2 Left Pipette,"""p300_single_gen2"""
@@ -47,5 +49,5 @@ OT2 Independent Transfer Source Slots,"[""2"", ""3""]"
 OT2 Independent Transfer Dest Labwares,"[""corning_96_wellplate_360ul_flat"", ""corning_96_wellplate_360ul_flat""]"
 OT2 Independent Transfer Dest Slots,"[""5"",""6""]"
 "OT2 Independent Transfer Dest [Start, Stop]","[0,5]"
-,
-Stock Makeup (Component Wise),"[['ethanol','dspe-peg'],  ['ethanol','dppc'], ['ethanol','PFH'],['ethanol'],['water']]"
+Last Updated Code Date ,12
+,4
