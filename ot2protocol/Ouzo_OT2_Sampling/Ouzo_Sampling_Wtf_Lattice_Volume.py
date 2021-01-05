@@ -42,47 +42,65 @@ def get_experiment_plan(filepath):
 
     return plan_dict
 
-# addd catchers which RAISE errors and explain why 
-def generate_candidate_lattice_concentrations(experiment_csv_dict, filter_one = True):
+def all_same(items):
+    "Checks whether all elements are identical in type and value, using the initial entry as the basis of comparison"
+    return all(x == items[0] for x in items)
+
+
+# also naming notation should more be "uniform" versus "lattice"
+def generate_candidate_lattice_concentrations(experiment_csv_dict, expose_df = False):
     """Given the complete csv dictionary of instruction, uses the n component linspaces of equivalent concentration units which summmation equal one (i.e. volf or wtf). The number of linspaces used are to equal the total number of components - 1. Once a 2D list of component concentration candidates are generated the canidates (of length total # of components - 1) are subsequently filtered/completed by sample_sum_filter. All entry additions follow the order of linspaces from the experiment_csv_dict."""
     
-    # Calling information from csv 
+    component_units = experiment_csv_dict['Component Concentration Unit']
     component_name_list = experiment_csv_dict['Component Shorthand Names']
     component_conc_linspaces_list = experiment_csv_dict['Component Concentrations [min, max, n]']
-    component_conc_type_list = experiment_csv_dict['Component Concentration Unit']
     component_spacing_type = experiment_csv_dict['Component Spacing']
- 
+
+    assert len(component_units) == len(component_name_list), 'Number of component names not equal to number of provided units'
+    assert all_same(component_units), 'Unit of components are not identical, currently all units must be identical.'
+
     conc_range_list = [] # will hold flattened linspaces (component spacing) of possible concentration for each component given the spacing method 
     for conc_linspace in component_conc_linspaces_list:
-        if component_spacing_type == "linear": # this spacing type can handle cases of zero concentration
+        if component_spacing_type == "linear": # this spacing type can handle cases of zero concentration.
             conc_range_list.append(np.linspace(*conc_linspace))
-        elif component_spacing_type == "log": # currently avoid using given need to convert back into linear space...will update
-            conc_range_list.append(np.logspace(*conc_linspace))
+        elif component_spacing_type == "random": # when using random sampling ensure space searching small enough or resoluiton high enough. 
+            conc_range_list.append(np.random.uniform(*conc_linspace))
         else:
-            type_list = ["linear", "log"]
-            assert spacing_type in type_list, "spacing_type was not specified in the experiment plan, or the the requested method is not implemented."
+            type_list = ["linear","random"] 
+            assert component_spacing_type in type_list, "spacing_type was not specified in the experiment plan, or the the requested method is not implemented."
     
     # note: the aterisk is to unpack the list container
     conc_grid = np.meshgrid(*conc_range_list) # Setup for every combination of the flattened linspaces with meshgrid.
     # the meshgrid is not yet formatted where samples concentrations in one container (i.e. list), currently in "scatter" form. 
-    
+
     component_conc_dict = {} 
     for i in range(len(conc_grid)): 
         component_name = component_name_list[i]
-        component_conc_dict[component_name] = conc_grid[i].ravel()
+        component_unit = component_units[i]
+        component_conc_dict[component_name + " " + component_unit] = conc_grid[i].ravel()
     concentration_df = pd.DataFrame.from_dict(component_conc_dict)
 
-    # here is where one could incorperate different forms of completion for underspecfied components given a specfic unit case, currently wtf/volf completion to one
-    completing_component_name = component_name_list[len(component_name_list)-1]
-    concentration_df[completing_component_name] = (1 - concentration_df.sum(axis=1)) 
-    
-    unfiltered_concentration_df = concentration_df # used to catch errors when concentration_df after fully defined concentration produces no suitable canidates
-    concentration_df = concentration_df[concentration_df[completing_component_name] > 0]
-    concentration_df.reset_index(drop=True, inplace=True)
+    # here is where one could incorperate different forms of completion for underspecfied components given a specfic unit case
+    if component_units[0] in ('wtf','volf','molf'):
+        assert len(component_units) != len(component_conc_linspaces_list) - 1, 'Concentrations are either over- or under- defined' # this should only be the case of unity concentrations
+        completing_component_name = component_name_list[len(component_name_list)-1]
+        concentration_df[completing_component_name] = (1 - concentration_df.sum(axis=1)) 
+        
+        # add unit to dataframe
+        unfiltered_concentration_df = concentration_df # used to catch errors when concentration_df after fully defined concentration produces no suitable canidates
+        concentration_df = concentration_df[concentration_df[completing_component_name] > 0]
+        concentration_df.reset_index(drop=True, inplace=True)
+        
+        if expose_df == True:
+            return unfiltered_concentration_df
 
-    # come up with a way 
-    assert not concentration_df.empty, 'No suitable samples were found, please change your linspace. Most likely this means you have your linspaces set too close together at all high concentrations (close to 1).'
+        assert not concentration_df.empty, 'No suitable samples were found, please change your concentration space. Most likely this means you have your linspaces set too close together at all high concentrations (close to 1) resulting in impossible samples (wtf/volf>1). Turn on expose_df to return unfiltered dataframe'
     
+    # add elif for difference unit cases.
+        
+    else:
+        raise AssertionError("Component " + str(component_units[0]) + " unit not currently supported")
+
     assert len(component_name_list) != len(component_conc_linspaces_list), "The provided experimental instructions are overspecified."
     concentration_array = concentration_df.values
         
@@ -92,8 +110,10 @@ def generate_candidate_lattice_stocks(experiment_csv_dict): # work on trying to 
     """Mirror of function generate_candidate_lattice_concentrations expect for the case of looking through multiple stocks and creating combinations of stock concentrations from the csv provided stock concentration linspaces. The major diffierences is the lack of optional 0 concentration handling and unity filter as the concentrations of stocks are independent from on another unlike the concentrations of a components in a singular sample. Returns a 2D array of stock concnetration combinations. Again 1D order is order of stock name and linspace."""
     
     stock_name_list = experiment_csv_dict['Stock Names']
+    stock_units = experiment_csv_dict['Stock Concentration Units']
     stock_concs_linspaces_list = experiment_csv_dict['Stock Search Concentrations [min, max, n]']
-    stock_conc_type_list = experiment_csv_dict['Stock Concentration Units']
+
+    assert len(stock_units) == len(stock_name_list), 'Number of component names not equal to number of provided units' 
     
     stock_ranges_list = []
 
@@ -105,12 +125,17 @@ def generate_candidate_lattice_stocks(experiment_csv_dict): # work on trying to 
     stock_conc_dict = {}
     for i in range(len(conc_grid)): 
         stock_name = stock_name_list[i]
-        stock_conc_dict[stock_name] = conc_grid[i].ravel()
+        stock_unit = stock_units[i] # support all units unlike completing concentration case
+        stock_conc_dict[stock_name + " " + stock_unit] = conc_grid[i].ravel()
     stock_concentration_df = pd.DataFrame.from_dict(stock_conc_dict)
+
+    assert not stock_concentration_df.empty, 'No suitable samples were found, please change your concentration space. Most likely this means you have your linspaces set too close together at all high concentrations (close to 1) resulting in impossible samples (wtf/volf>1). Turn on expose_df to return unfiltered dataframe'
     stock_concentration_array = stock_concentration_df.values 
 
     return stock_concentration_array
 
+
+# Add volume catchers
 def prepare_stock_search(stock_canidates, experiment_csv_dict, wtf_sample_canidates, min_instrument_vol, max_instrument_vol):
     """
     Used to create a dictionary containing volume and fractional concnetration (currently only wtf and not volf notation wise) of sample canidates which are based on a groups of stock canidates. Also provides useful information in the stock_text_list entry like which stock combination was used and the number of samples possible with the specfic stock combination and concentration canidates. Essentially this runs through the process of creating a bunch of plausible cases given the single component canidates with the each of the previously created stock combination canidates. 
@@ -202,10 +227,10 @@ def calculate_ouzo_volumes_from_wtf(sample_conc_canidates, experiment_csv_dict, 
 
     # component information, [component1, component2, component3...]
     component_names = experiment_csv_dict['Component Shorthand Names']
-    component_units = experiment_csv_dict['Component Concentration Unit']
+    component_units = experiment_csv_dict['Component Concentration Unit'] # never used? 
     component_densities = experiment_csv_dict['Component Density (g/mL)']
     component_mws = experiment_csv_dict['Component MW (g/mol)']
-    component_sol_densities = experiment_csv_dict['Component Solution vol to wt density (g/mL)']
+    #component_sol_densities = experiment_csv_dict['Component Solution vol to wt density (g/mL)']
     
     stock_names = experiment_csv_dict['Stock Names']
     stock_concentrations_units = experiment_csv_dict['Stock Concentration Units']
@@ -336,10 +361,10 @@ def rearrange_2D_list(nth_list):
         list_rearranged.append(ith_of_each_sublist)
     return list_rearranged
 
-def experiment_sample_dict(experiment_plan_path, min_input_volume, max_input_volume, filter_sum_one = True): 
+def experiment_sample_dict(experiment_plan_path, min_input_volume, max_input_volume): 
     """A wrapper for functions required to create ouzo samples, where final information is presented in returned dictionary. EXPLAIN THE WALKTHROUGH OF THIS STEP BY STEP ALLOWING SOMEONE TO FOLLOW  """
     experiment_plan_dict = get_experiment_plan(experiment_plan_path)
-    wtf_sample_canidates = generate_candidate_lattice_concentrations(experiment_plan_dict, filter_one=filter_sum_one)
+    wtf_sample_canidates = generate_candidate_lattice_concentrations(experiment_plan_dict)
     volume_sample_canidates = calculate_ouzo_volumes_from_wtf(wtf_sample_canidates, experiment_plan_dict)
     
     # now filter volume min no max for all but water, but min and max for water - but should not have to input volume should just be based on pipettes
