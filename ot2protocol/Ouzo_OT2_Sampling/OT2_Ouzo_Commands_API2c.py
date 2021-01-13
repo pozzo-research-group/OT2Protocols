@@ -17,6 +17,17 @@ def custom_labware_dict(labware_dir_path): # make it so it redirects back to ori
     os.chdir(original_working_dir)
     return labware_dict 
 
+def determines_stock_setup(protocol, experiment_dict, sample_volumes_df):
+    stock_plate = custom_or_native_labware(protocol, experiment_dict['OT2 Stock Labware'], experiment_dict['OT2 Stock Labware Slot'], custom_labware_dict)
+    stock_plate_rows = [well for row in stock_plate.rows() for well in row]
+    stock_plate_well_volume = stock_plate.__dict__['_well_definition']['A1']['totalLiquidVolume'] 
+
+    # add volume buffer as not going 100% down to well bottom
+    for 
+    
+    
+    print(stock_plate_well_volume)
+
 def create_samples(protocol, experiment_dict, sample_volumes, transfer = False, custom_labware_dict = {}):
     """A function which uses a protocol object from the OT2 API V2 module which along with calculated and rearranged volumes
     will produce commands for the OT2. Additionally, information regarding the wells, slot and labware in use will be returned 
@@ -50,6 +61,10 @@ def create_samples(protocol, experiment_dict, sample_volumes, transfer = False, 
     for labware in dest_plates:
         rows = [well for row in labware.rows() for well in row]
         dest_wells_row_order = dest_wells_row_order + rows
+
+
+    # checks like this might be better out as there own function or method - makes it cleaner and easier to follow code
+    # call function enough_wells, volume_check, stock_volume_check, etc...
 
     if len(sample_volumes)>len(dest_wells_row_order):
         needed_wells = str(len(sample_volumes) - len(dest_wells_row_order))

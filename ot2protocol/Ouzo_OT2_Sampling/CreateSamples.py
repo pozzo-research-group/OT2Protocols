@@ -57,21 +57,20 @@ def generate_candidate_lattice_concentrations(experiment_csv_dict, expose_df = F
     component_spacing_type = experiment_csv_dict['Component Spacing']
 
     assert len(component_units) == len(component_name_list), 'Number of component names not equal to number of provided units'
-    assert all_same(component_units), 'Unit of components are not identical, currently all units must be identical.'
+    assert all_same(component_units), 'Unit of components are not identical, currently all units must be identical.'    
+
 
     conc_range_list = [] # will hold flattened linspaces (component spacing) of possible concentration for each component given the spacing method 
     for conc_linspace in component_conc_linspaces_list:
-        if component_spacing_type == "linear": # this spacing type can handle cases of zero concentration.
+        if component_spacing_type == "linear": 
             conc_range_list.append(np.linspace(*conc_linspace))
-        elif component_spacing_type == "random": # when using random sampling ensure space searching small enough or resoluiton high enough. 
+        elif component_spacing_type == "random": # ensure space searching small enough or resoluiton high enough. 
             conc_range_list.append(np.random.uniform(*conc_linspace))
         else:
             type_list = ["linear","random"] 
             assert component_spacing_type in type_list, "spacing_type was not specified in the experiment plan, or the the requested method is not implemented."
     
-    # note: the aterisk is to unpack the list container
     conc_grid = np.meshgrid(*conc_range_list) # Setup for every combination of the flattened linspaces with meshgrid.
-    # the meshgrid is not yet formatted where samples concentrations in one container (i.e. list), currently in "scatter" form. 
 
     component_conc_dict = {} 
     for i in range(len(conc_grid)): 
@@ -81,14 +80,17 @@ def generate_candidate_lattice_concentrations(experiment_csv_dict, expose_df = F
     concentration_df = pd.DataFrame.from_dict(component_conc_dict)
 
     # here is where one could incorperate different forms of completion for underspecfied components given a specfic unit case
-    if component_units[0] in ('wtf','volf','molf'):
+    # it might be wise to move this out into its own functions or group of different functions, hmmm could be good justification for moving to classes - the use of dataframe to me goes against this/  
+    if component_units[0] in ('wtf','volf','molf'): # complete using final entry in list of components
         assert len(component_units) != len(component_conc_linspaces_list) - 1, 'Concentrations are either over- or under- defined' # this should only be the case of unity concentrations
-        completing_component_name = component_name_list[len(component_name_list)-1]
-        concentration_df[completing_component_name] = (1 - concentration_df.sum(axis=1)) 
+        completing_index = len(component_name_list)-1
+        completing_component_name = component_name_list[completing_index]
+        completing_component_unit = component_units[completing_index]
+        completing_entry_name = completing_component_name + " " + completing_component_unit
+        concentration_df[completing_entry_name] = (1 - concentration_df.sum(axis=1)) 
         
-        # add unit to dataframe
         unfiltered_concentration_df = concentration_df # used to catch errors when concentration_df after fully defined concentration produces no suitable canidates
-        concentration_df = concentration_df[concentration_df[completing_component_name] > 0]
+        concentration_df = concentration_df[concentration_df[completing_entry_name] > 0]
         concentration_df.reset_index(drop=True, inplace=True)
         
         if expose_df == True:
@@ -102,9 +104,9 @@ def generate_candidate_lattice_concentrations(experiment_csv_dict, expose_df = F
         raise AssertionError("Component " + str(component_units[0]) + " unit not currently supported")
 
     assert len(component_name_list) != len(component_conc_linspaces_list), "The provided experimental instructions are overspecified."
-    concentration_array = concentration_df.values
+    # concentration_array = concentration_df.values
         
-    return concentration_array
+    return concentration_df
 
 def generate_candidate_lattice_stocks(experiment_csv_dict): # work on trying to get this into one function with generate_candidate_lattice_concentrations
     """Mirror of function generate_candidate_lattice_concentrations expect for the case of looking through multiple stocks and creating combinations of stock concentrations from the csv provided stock concentration linspaces. The major diffierences is the lack of optional 0 concentration handling and unity filter as the concentrations of stocks are independent from on another unlike the concentrations of a components in a singular sample. Returns a 2D array of stock concnetration combinations. Again 1D order is order of stock name and linspace."""
@@ -210,17 +212,12 @@ def calculate_stock_volumes_simple_volf_mix(sample_conc_canidates, experiment_cs
     
 # when calculating volumes need to add "catchers" to allow user to be informed of why search/exe failed (not enough of component b, volume to small etc..)  
 # In reality this should be called something like mixing with common solvents, but sure since other volume calculating function in place to deal with non common solvent mixing cases
-def calculate_ouzo_volumes_from_wtf(sample_conc_canidates, experiment_csv_dict, stock_searching = False, stock_searching_concentration = None):
-    """Given sample concentration information along with stock information either directly from the csv or inputted manually (stock searching) will calculate the required volume for each stock to create a given sample. All order is preserved in terms of the samples position in the new volume list and the stock positions. For example: 
-    - selected_stock_concentration = [0.1, 0.3]
-    - selected_sample_concentrations = [[0.02, 0.20], [0.05, 0.87]]
-    - output = [[volume of 0.1 stock, volume of 0.3 stock], [volume of 0.1 stock, volume of 0.3 stock]] 
-    ! should change notation to stock_volumes instead of sample volumes makes it confusion 
+def calculate_ouzo_volumes_from_wtf(sample_conc_df, experiment_csv_dict, stock_searching = False, stock_searching_concentration = None):
+    """ This specfic volume function uses the stock concentration and sample concentration to calculate volumes for each stock to create a sample.
+    For this case of Ouzo calculations, it is assumed the 2nd to last entry (in all things name, unit, concentration value) is the common solvent for all things prior to the second to last entry,
+    while the final entry is assumed to be an indepedently added volume of a component. In the case of a typical emuslion the common sovlent is an alochol and the last completing component is water. 
+    """ 
     
-    All intermediate calculation volumes are assumed to in milliliters unless stated otherwise. <- check and label these as not clear
-    
-    """
-
     total_sample_mass = experiment_csv_dict['Sample Amount']
     sample_unit = experiment_csv_dict['Sample Unit'] 
     assert sample_unit == 'g', 'Incorrect sample unit for wtf sample calculations, to calculate wtfs of components correctly a mass (grams) must be used. Check experiment plan CSV.'
@@ -230,7 +227,6 @@ def calculate_ouzo_volumes_from_wtf(sample_conc_canidates, experiment_csv_dict, 
     component_units = experiment_csv_dict['Component Concentration Unit'] # never used? 
     component_densities = experiment_csv_dict['Component Density (g/mL)']
     component_mws = experiment_csv_dict['Component MW (g/mol)']
-    #component_sol_densities = experiment_csv_dict['Component Solution vol to wt density (g/mL)']
     
     stock_names = experiment_csv_dict['Stock Names']
     stock_concentrations_units = experiment_csv_dict['Stock Concentration Units']
@@ -242,23 +238,31 @@ def calculate_ouzo_volumes_from_wtf(sample_conc_canidates, experiment_csv_dict, 
     else: 
         stock_concentrations = experiment_csv_dict['Final Selected Stock Concentrations']
     
-    # these are very ouzo specific 
+
+    #ensuring the df of sample names and units match
+    check_components = [name + " " + unit for name, unit in zip(component_names, component_units)]
+    assert check_components == list(sample_conc_df.columns), 'Component names and unit during sample concentration generation does not match the names and units for volume calulation.'
+    sample_conc_canidates = sample_conc_df.values # ideally you would not be doing this and applying expessions to the columns, but since component volumes are dependent on each other...could create the whole and filter out negative values
+
+
+    # From here, not generalized at all and very Ouzo case specfic. 
     good_solvent_index = experiment_csv_dict['Component Good Solvent Index (Only Ouzo)']-1 
     poor_solvent_index = experiment_csv_dict['Component Poor Solvent Index (Only Ouzo)']-1 
 
+ 
     all_sample_stock_volumes = []
     for sample in sample_conc_canidates: # sample refers to the sample component concentrations, since iterating order will match component_names
         total_good_solvent_wtf = sample[good_solvent_index]
         total_good_solvent_mass = total_sample_mass*total_good_solvent_wtf
-        total_good_solvent_appx_volume = total_good_solvent_mass*ethanol_wtf_water_to_density(total_good_solvent_wtf) 
+        total_good_solvent_appx_volume = total_good_solvent_mass*ethanol_wtf_water_to_density(total_good_solvent_wtf) # in mL
         # the reason the total good solvent volume is needed is due to it being shared with other stocks needing to keep track of the volume used
 
         stock_volumes = [] # volume of each respective stock at the respective index
         component_volumes = [] # volume for shared component which in this case is a solvent
-
+        
         for i, component_conc in enumerate(sample):
             component_stock_conc = stock_concentrations[i]
-            if i != good_solvent_index or poor_solvent_index: # All components are suspended in the good solvent
+            if i not in (good_solvent_index, poor_solvent_index): # All components are suspended in the good solvent
                 stock_unit = stock_concentrations_units[i]
                 if  stock_unit == 'molarity': # currently only use case for lipids
                     component_mw = component_mws[i]
@@ -268,20 +272,22 @@ def calculate_ouzo_volumes_from_wtf(sample_conc_canidates, experiment_csv_dict, 
                     component_stock_volume = component_moles*1000/component_stock_conc
                 if stock_unit == 'wtf': # use case for everything except lipids and pure solvents
                     stock_density = experiment_csv_dict['Stock Appx Density (g/mL)'][i]
-                    component_density = experiment_csv_dict['Component Density (g/mL)']
+                    component_density = experiment_csv_dict['Component Density (g/mL)'][i]
                     component_mass = component_conc*total_sample_mass
                     component_volume = component_mass/component_density # lipids are assumed to have 0 volume, but must account for oil. 
                     component_volumes.append(component_volume)
                     component_stock_mass = component_mass/component_stock_conc
-                    component_stock_volume = component_stock_mass/stock_density #
+                    component_stock_volume = component_stock_mass/stock_density 
                 stock_volumes.append(component_stock_volume)
-
+                
             elif i == good_solvent_index and component_stock_conc == 1: # good solvent should always be pure to complete the compositional requirement before addition of poor solvent
-                good_solvent_volume_added = np.sum(stock_volumes)-np.sum(component_volumes) 
+                #print('sum', np.sum(component_volumes))
+                good_solvent_volume_added = np.sum(stock_volumes)-np.sum(component_volumes) # is it possible for negative values?
                 component_stock_volume = total_good_solvent_appx_volume - good_solvent_volume_added
                 stock_volumes.append(component_stock_volume)
 
             elif i == poor_solvent_index and component_stock_conc == 1: # poor solvent always to be added last, but does not matter here only when using the results with OT2 volume
+                stock_density = experiment_csv_dict['Stock Appx Density (g/mL)'][i]
                 component_mass = component_conc*total_sample_mass
                 component_stock_volume = component_mass/stock_density 
                 stock_volumes.append(component_stock_volume)
@@ -289,17 +295,59 @@ def calculate_ouzo_volumes_from_wtf(sample_conc_canidates, experiment_csv_dict, 
             else: 
                 print(i, len(sample), 'something went wrong')
         all_sample_stock_volumes.append((stock_volumes)) # still in mL
-    
     all_sample_stock_volumes_ith_rearranged = np.asarray(rearrange_2D_list(all_sample_stock_volumes)) # may not be needed could just call as list comprehension in when making stock_dictionary
+
+
+    ### Back to generalized
 
     stock_volumes_dict = {}
     for i in range(len(all_sample_stock_volumes_ith_rearranged)):
         stock_name = stock_names[i]
-        stock_volumes_dict[stock_name] = all_sample_stock_volumes_ith_rearranged[i].ravel()
+        stock_volumes_dict[stock_name] = all_sample_stock_volumes_ith_rearranged[i].ravel() # how to make this unit generalized
     stock_volumes_df = pd.DataFrame.from_dict(stock_volumes_dict) # incorperate this with the other df and instead of arrays make the inputs to functions dfs. 
+    stock_volumes_df["Total Sample Volume"] = stock_volumes_df.sum(axis=1)
     stock_volumes_array = stock_volumes_df.values
+
+    # here is where you can add logic for different units 
+    unit = 'uL'
+    stock_volumes_df = stock_volumes_df*1000
+    unit_added_col_names = [stock_name + " " + unit for stock_name in stock_volumes_df.columns]
+    stock_volumes_df.columns = unit_added_col_names
     
-    return stock_volumes_array*1000 # output in uL
+    return stock_volumes_df # output in uL
+
+
+def total_volume_restriction_df(df, max_total_volume):
+    column_names = df.columns
+    total_column_name = [column_name for column_name in column_names if "Total Sample Volume" in column_name][0]
+    df_unfiltered = df.copy()
+    df = df[df[total_column_name] <= max_total_volume]
+    if df.empty is True:
+        raise AssertionError("No suitable samples available to create due to TOTAL SAMPLE VOLUME being too high, reconsider labware or total sample mass/volume", df_unfiltered[total_column_name])
+    return df
+
+def pipette_volume_restriction_df(df, min_pipette_volume, max_pipette_volume, pipette_restriction_YN):
+    column_names = df.columns
+    stock_column_names = [column_name for column_name in column_names if "stock" in column_name]
+
+    for YN in pipette_restriction_YN:
+        for stock_column, YN in zip(stock_column_names, pipette_restriction_YN):
+            df_unfiltered = df.copy() # making a copy
+            df = df[df[stock_column] >= 0]
+            if df.empty is True:
+                raise AssertionError(stock_column + ' volumes contains only negative volumes. df series printed below', df_unfiltered[stock_column])
+
+            df = df[(df[stock_column] >= min_pipette_volume) | (df[stock_column] == 0)]
+            if df.empty is True:
+                raise AssertionError(stock_column + ' volumes are below the pipette minimum of' + str(min_pipette_volume) + 'df series printed below', df_unfiltered[stock_column])
+
+            if YN == 'Y':
+                df = df[df[stock_column] <= max_pipette_volume]
+                if df.empty is True:
+                    raise AssertionError(stock_column + ' volumes are above the pipette max of' + str(max_pipette_volume) + 'df series printed below', df_unfiltered[stock_column])
+    return df 
+
+
 
 def ethanol_wtf_water_to_density(ethanol_wtf): # MOD 
     """Converts wtf of ethanol in a binary mixture with water to density using a polyfit of 4. The results are mainly used in the calculation of volume from a weight fraction. 
@@ -312,7 +360,7 @@ def ethanol_wtf_water_to_density(ethanol_wtf): # MOD
     fit = np.polyval(coeffs, ethanol_wtf)
     return fit
                 
-def check_volumes(sample, min_instrument_vol, max_instrument_vol = None):
+def check_volumes(sample, min_instrument_vol, max_instrument_vol = None): # moving away from this as all logic can be done in df
     """Checks a 1D array (in this case the stock volumes of one sample) to see if it contains any volumes outside of the provided min/max of the instrumentation. The only case allowed outside of these min/max bounds is the case of the instrument pipetting no volume or zero volume. For use in case of wanting to limit the amount of steps in sample creation or adhering to OT2 pipette restrictions.
     
     Used as an intermediate step when filtering large amount of samples through the function - filter_samples. 
