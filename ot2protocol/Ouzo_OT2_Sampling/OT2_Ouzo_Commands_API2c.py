@@ -22,10 +22,6 @@ def determines_stock_setup(protocol, experiment_dict, sample_volumes_df):
     stock_plate_rows = [well for row in stock_plate.rows() for well in row]
     stock_plate_well_volume = stock_plate.__dict__['_well_definition']['A1']['totalLiquidVolume'] 
 
-    # add volume buffer as not going 100% down to well bottom
-    for 
-    
-    
     print(stock_plate_well_volume)
 
 def create_samples(protocol, experiment_dict, sample_volumes, transfer = False, custom_labware_dict = {}):
@@ -122,8 +118,11 @@ def create_samples(protocol, experiment_dict, sample_volumes, transfer = False, 
     stock_plate = custom_or_native_labware(protocol, experiment_dict['OT2 Stock Labware'], experiment_dict['OT2 Stock Labware Slot'], custom_labware_dict)
     stock_plate_rows = [well for row in stock_plate.rows() for well in row]
     
+    ### here is the actual pipetting
+
     info_list = []
     for stock_index, stock_volumes in enumerate(stock_volumes_lists):
+        
         if stock_volumes[0] <= pipette_1.max_volume: #initializing pipette for first stock volume in list of stock volumes
             pipette = pipette_1
 
@@ -153,6 +152,9 @@ def create_samples(protocol, experiment_dict, sample_volumes, transfer = False, 
                 pipette.pick_up_tip()
                 pipette.transfer(volume, stock_plate_rows[stock_index], dest_wells_row_order[well_index], new_tip = 'never')
         pipette.drop_tip()
+
+
+
 
     ### Transfer as an optional last step from sample/dest plate to another plate ### 
     
