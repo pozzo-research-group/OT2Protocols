@@ -46,6 +46,9 @@ def all_same(items):
     "Checks whether all elements are identical in type and value, using the initial entry as the basis of comparison"
     return all(x == items[0] for x in items)
 
+def combine_df(df1,df2):
+    df3 = pd.concat([df1,df2], axis=1)
+    return df3
 
 # also naming notation should more be "uniform" versus "lattice"
 def generate_candidate_lattice_concentrations(experiment_csv_dict, expose_df = False):
@@ -183,31 +186,7 @@ def prepare_stock_search(stock_canidates, experiment_csv_dict, wtf_sample_canida
     return prepare_stock_dict
 
 
-def add_blank_sample(sample_concs, sample_volumes, blank_total_volume, blank_component_concs):
-    """Allows for the addition of a blank sample at the end of both the concentration and volume arrays that one has selected for experimentation, returns both modified arrays. Blank sample units and order of components are assumed to the same as those of other all other samples. Blank total volume left as non-csv-dependent input as this could change with the selected stock conidate/experiment conditions and is up to the user to decide which is the most appropiate.
-    
-    CSV Pulled Information: make it pulled but dont make it dependent on a wrapper - keep it indepdenent
-    - blank_component_wtfs = 'Blank Component Concentrations (wtfs)' : an array of the concentration of the blank sample, which by default will be in the same units as the sample_wtfs. 
-   """
-    
-    blank_component_volumes = []
-    for component_composition in blank_component_concs:
-        volume = component_composition*blank_total_volume
-        blank_component_volumes.append(volume)
-    blank_concs_array = np.asarray([blank_component_concs])
-    blank_volume_array = np.asarray([blank_component_volumes])
-    blank_and_sample_concs = np.concatenate((sample_concs, blank_concs_array))
-    blank_and_sample_volumes = np.concatenate((sample_volumes, blank_volume_array))
-    return blank_and_sample_concs, blank_and_sample_volumes
-    
-def calculate_stock_volumes_simple_volf_mix(sample_conc_canidates, experiment_csv_dict):
-    total_sample_mass = experiment_csv_dict['Sample Mass (g)']
-    component_names = experiment_csv_dict['Component Shorthand Names']
-    component_units = experiment_csv_dict['Component Concentration Unit']
-    component_densities = experiment_csv_dict['Component Density (g/mL)']
-    component_mws = experiment_csv_dict['Component MW (g/mol)']
-    component_sol_densities = experiment_csv_dict['Component Solution vol to wt density (g/mL)']
-    stock_names = experiment_csv_dict['Stock Names']
+
 
     
 # when calculating volumes need to add "catchers" to allow user to be informed of why search/exe failed (not enough of component b, volume to small etc..)  
@@ -325,26 +304,40 @@ def total_volume_restriction_df(df, max_total_volume):
     if df.empty is True:
         raise AssertionError("No suitable samples available to create due to TOTAL SAMPLE VOLUME being too high, reconsider labware or total sample mass/volume", df_unfiltered[total_column_name])
     return df
+ 
+def general_max_restriction(df, max_value, column_name):
+    df_unfiltered = df.copy()
+    df = df[df[column_name] <= max_value]
+    if df.empty is True:
+        raise AssertionError("No suitable samples available to create due to general filter being to low")
+    return df
 
-def pipette_volume_restriction_df(df, min_pipette_volume, max_pipette_volume, pipette_restriction_YN):
+def pipette_volume_restriction_df(df, min_pipette_volume, max_pipette_volume, pipette_restriction_YN = False):
     column_names = df.columns
     stock_column_names = [column_name for column_name in column_names if "stock" in column_name]
-
-    for YN in pipette_restriction_YN:
-        for stock_column, YN in zip(stock_column_names, pipette_restriction_YN):
-            df_unfiltered = df.copy() # making a copy
-            df = df[df[stock_column] >= 0]
-            if df.empty is True:
+    df_unfiltered = df.copy()
+    
+    for i, stock_column in enumerate(stock_column_names):
+        df = df[df[stock_column] >= 0] # filtering all samples less than 0 
+        if df.empty is True:
                 raise AssertionError(stock_column + ' volumes contains only negative volumes. df series printed below', df_unfiltered[stock_column])
 
-            df = df[(df[stock_column] >= min_pipette_volume) | (df[stock_column] == 0)]
-            if df.empty is True:
-                raise AssertionError(stock_column + ' volumes are below the pipette minimum of' + str(min_pipette_volume) + 'df series printed below', df_unfiltered[stock_column])
+        df = df[(df[stock_column] >= min_pipette_volume) | (df[stock_column] == 0)] # filtering all samples that are less than miniumum pipette value and are NOT zero
+        if df.empty is True:
+            raise AssertionError(stock_column + ' volumes are below the pipette minimum of' + str(min_pipette_volume) + 'df series printed below', df_unfiltered[stock_column])
 
+        if pipette_restriction_YN == False:
+            df = df[df[stock_column] <= max_pipette_volume] # filtering for the max_volume of a pipette
+            if df.empty is True:
+                raise AssertionError(stock_column + ' volumes are above the pipette max of' + str(max_pipette_volume) + 'df series printed below', df_unfiltered[stock_column])
+
+        if pipette_restriction_YN == len(stock_column_names):
+            YN = pipette_restriction_YN[i]
             if YN == 'Y':
                 df = df[df[stock_column] <= max_pipette_volume]
                 if df.empty is True:
-                    raise AssertionError(stock_column + ' volumes are above the pipette max of' + str(max_pipette_volume) + 'df series printed below', df_unfiltered[stock_column])
+                    raise AssertionError(stock_column + ' volumes are above the pipette max of' + str(max_pipette_volume) + 'df series printed below', df_unfiltered[stock_column])            
+     
     return df 
 
 
@@ -360,73 +353,6 @@ def ethanol_wtf_water_to_density(ethanol_wtf): # MOD
     fit = np.polyval(coeffs, ethanol_wtf)
     return fit
                 
-def check_volumes(sample, min_instrument_vol, max_instrument_vol = None): # moving away from this as all logic can be done in df
-    """Checks a 1D array (in this case the stock volumes of one sample) to see if it contains any volumes outside of the provided min/max of the instrumentation. The only case allowed outside of these min/max bounds is the case of the instrument pipetting no volume or zero volume. For use in case of wanting to limit the amount of steps in sample creation or adhering to OT2 pipette restrictions.
-    
-    Used as an intermediate step when filtering large amount of samples through the function - filter_samples. 
-    
-    """
-
-    checker = []
-    for vol in sample:
-        if vol >= min_instrument_vol and vol <= max_instrument_vol or vol==0: # zero added in the case of no volume
-            checker.append(1)
-        else:
-            checker.append(0)
-    if sum(checker) == len(sample):
-        return True
-    else:
-        return False
-
-def filter_samples(wtf_samples_canidates, volume_sample_canidates, min_vol, max_vol):
-    """Filters samples based on volume restriction and matches up with previously created wtf sample canidates, 
-    returning an updated list of wtf canidates AND volume canidates"""
-    
-    filtered_volumes = []
-    filtered_wtf = []
-    filtered_out = [] # optional just add an append in an else statement
-    
-    for sample_wtfs, sample_vols in zip(wtf_samples_canidates, volume_sample_canidates):
-        if check_volumes(sample_vols, min_vol, max_vol) == True: # could say samples_vols[:-1], essentially two checks at once, check from sample_vols[:-1] if min_vol, max_vol =optional - change in funtion, and also if samples_vols[-1] 
-            filtered_volumes.append(sample_vols)
-            filtered_wtf.append(sample_wtfs)
-    
-    volume_checking_list = [sum(volume) for volume in filtered_volumes]
-    min_sample_volume = min(volume_checking_list)
-    max_sample_volume = max(volume_checking_list)
-    
-
-    return (filtered_wtf, filtered_volumes, min_sample_volume, max_sample_volume)
-    
-def rearrange_2D_list(nth_list):
-    """Rearranges information from a 2D_list of length m with entries of length n to an outer array of length n, with entries of length m. Each entry now holds the ith entry of original entry in a new entry.
-   [[a1,b1,c1],[a2,b2,c2]] => [[a1,a2],[b1,b2],[c1,c2]], making it easier to handle for cases like dataframes. 
- 
-    """
-    list_rearranged = []
-    for i in range(len(nth_list[0])): 
-        ith_of_each_sublist = [sublist[i] for sublist in nth_list]
-        list_rearranged.append(ith_of_each_sublist)
-    return list_rearranged
-
-def experiment_sample_dict(experiment_plan_path, min_input_volume, max_input_volume): 
-    """A wrapper for functions required to create ouzo samples, where final information is presented in returned dictionary. EXPLAIN THE WALKTHROUGH OF THIS STEP BY STEP ALLOWING SOMEONE TO FOLLOW  """
-    experiment_plan_dict = get_experiment_plan(experiment_plan_path)
-    wtf_sample_canidates = generate_candidate_lattice_concentrations(experiment_plan_dict)
-    volume_sample_canidates = calculate_ouzo_volumes_from_wtf(wtf_sample_canidates, experiment_plan_dict)
-    
-    # now filter volume min no max for all but water, but min and max for water - but should not have to input volume should just be based on pipettes
-    
-    filtered_wtf_samples, filtered_volume_samples, min_sample_volume, max_sample_volume = filter_samples(wtf_sample_canidates, volume_sample_canidates, min_input_volume, max_input_volume)
-    
-    experiment_info_dict = {'experiment_plan_dict': experiment_plan_dict,
-                           'wtf_sample_canidates': wtf_sample_canidates,
-                           'volume_sample_canidates': volume_sample_canidates,
-                           'filtered_wtf_samples': filtered_wtf_samples,
-                           'filtered_volume_samples': filtered_volume_samples, 
-                           'Minimum Sample volume (uL)': min_sample_volume, 
-                           'Maximum Sample volume (uL)': max_sample_volume}
-    return experiment_info_dict
 
 
 def calculate_stock_volumes(experiment_csv_dict, sample_volumes): # need to further generalize
@@ -497,3 +423,87 @@ def create_csv(destination, info_list, wtf_samples, experiment_csv_dict):
 
         for row in csv_entries:
             csvwriter.writerow(row)
+
+def rearrange_2D_list(nth_list):
+    """Rearranges information from a 2D_list of length m with entries of length n to an outer array of length n, with entries of length m. Each entry now holds the ith entry of original entry in a new entry.
+   [[a1,b1,c1],[a2,b2,c2]] => [[a1,a2],[b1,b2],[c1,c2]], making it easier to handle for cases like dataframes. 
+ 
+    """
+    list_rearranged = []
+    for i in range(len(nth_list[0])): 
+        ith_of_each_sublist = [sublist[i] for sublist in nth_list]
+        list_rearranged.append(ith_of_each_sublist)
+    return list_rearranged
+
+
+
+################### FIX OR INTEGRATE ###########################################################
+
+def add_blank_sample(sample_concs, sample_volumes, blank_total_volume, blank_component_concs):
+    """Allows for the addition of a blank sample at the end of both the concentration and volume arrays that one has selected for experimentation, returns both modified arrays. Blank sample units and order of components are assumed to the same as those of other all other samples. Blank total volume left as non-csv-dependent input as this could change with the selected stock conidate/experiment conditions and is up to the user to decide which is the most appropiate.
+    
+    CSV Pulled Information: make it pulled but dont make it dependent on a wrapper - keep it indepdenent
+    - blank_component_wtfs = 'Blank Component Concentrations (wtfs)' : an array of the concentration of the blank sample, which by default will be in the same units as the sample_wtfs. 
+   """
+    
+    blank_component_volumes = []
+    for component_composition in blank_component_concs:
+        volume = component_composition*blank_total_volume
+        blank_component_volumes.append(volume)
+    blank_concs_array = np.asarray([blank_component_concs])
+    blank_volume_array = np.asarray([blank_component_volumes])
+    blank_and_sample_concs = np.concatenate((sample_concs, blank_concs_array))
+    blank_and_sample_volumes = np.concatenate((sample_volumes, blank_volume_array))
+    return blank_and_sample_concs, blank_and_sample_volumes
+    
+def calculate_stock_volumes_simple_volf_mix(sample_conc_canidates, experiment_csv_dict):
+    total_sample_mass = experiment_csv_dict['Sample Mass (g)']
+    component_names = experiment_csv_dict['Component Shorthand Names']
+    component_units = experiment_csv_dict['Component Concentration Unit']
+    component_densities = experiment_csv_dict['Component Density (g/mL)']
+    component_mws = experiment_csv_dict['Component MW (g/mol)']
+    component_sol_densities = experiment_csv_dict['Component Solution vol to wt density (g/mL)']
+    stock_names = experiment_csv_dict['Stock Names']
+
+
+
+def filter_samples(wtf_samples_canidates, volume_sample_canidates, min_vol, max_vol):
+    """Filters samples based on volume restriction and matches up with previously created wtf sample canidates, 
+    returning an updated list of wtf canidates AND volume canidates"""
+    
+    filtered_volumes = []
+    filtered_wtf = []
+    filtered_out = [] # optional just add an append in an else statement
+    
+    for sample_wtfs, sample_vols in zip(wtf_samples_canidates, volume_sample_canidates):
+        if check_volumes(sample_vols, min_vol, max_vol) == True: # could say samples_vols[:-1], essentially two checks at once, check from sample_vols[:-1] if min_vol, max_vol =optional - change in funtion, and also if samples_vols[-1] 
+            filtered_volumes.append(sample_vols)
+            filtered_wtf.append(sample_wtfs)
+    
+    volume_checking_list = [sum(volume) for volume in filtered_volumes]
+    min_sample_volume = min(volume_checking_list)
+    max_sample_volume = max(volume_checking_list)
+    
+
+    return (filtered_wtf, filtered_volumes, min_sample_volume, max_sample_volume)
+    
+
+
+def experiment_sample_dict(experiment_plan_path, min_input_volume, max_input_volume): 
+    """A wrapper for functions required to create ouzo samples, where final information is presented in returned dictionary. EXPLAIN THE WALKTHROUGH OF THIS STEP BY STEP ALLOWING SOMEONE TO FOLLOW  """
+    experiment_plan_dict = get_experiment_plan(experiment_plan_path)
+    wtf_sample_canidates = generate_candidate_lattice_concentrations(experiment_plan_dict)
+    volume_sample_canidates = calculate_ouzo_volumes_from_wtf(wtf_sample_canidates, experiment_plan_dict)
+    
+    # now filter volume min no max for all but water, but min and max for water - but should not have to input volume should just be based on pipettes
+    
+    filtered_wtf_samples, filtered_volume_samples, min_sample_volume, max_sample_volume = filter_samples(wtf_sample_canidates, volume_sample_canidates, min_input_volume, max_input_volume)
+    
+    experiment_info_dict = {'experiment_plan_dict': experiment_plan_dict,
+                           'wtf_sample_canidates': wtf_sample_canidates,
+                           'volume_sample_canidates': volume_sample_canidates,
+                           'filtered_wtf_samples': filtered_wtf_samples,
+                           'filtered_volume_samples': filtered_volume_samples, 
+                           'Minimum Sample volume (uL)': min_sample_volume, 
+                           'Maximum Sample volume (uL)': max_sample_volume}
+    return experiment_info_dict
