@@ -49,16 +49,24 @@ def object_to_object_list(protocol, stock_object_names, stock_object_slots):
    
     return labware_objects
 
-
-def find_max_volume_labware(experiment_csv_dict, custom_labware_dict): # can i just simulate hardcode , custom_labware_dict
+def find_max_dest_volume_labware(experiment_csv_dict, custom_labware_dict): # can i just simulate hardcode , custom_labware_dict
     """Using the stock labware name from the csv, loads the appropiate labware from both 
-    a custom and the native libary and determines the maximum volume for one stock labware well."""
-    # currently only suuports the max finding of the first well of the 
+    a custom and the native libary and determines the maximum volume for one stock labware well. Assumes all labware is all identical."""
+    protocol = simulate.get_protocol_api('2.0', extra_labware=custom_labware_dict) # encapsulated as only need an instance to simualte and toss
+    stock_plate = protocol.load_labware(experiment_csv_dict['OT2 Destination Labwares'][0], experiment_csv_dict['OT2 Destination Labware Slots'][0])
+    stock_plate_rows = [well for row in stock_plate.rows() for well in row]
+    stock_plate_well_volume = stock_plate.__dict__['_well_definition']['A1']['totalLiquidVolume'] 
+    return stock_plate_well_volume
+
+def find_max_stock_volume_labware(experiment_csv_dict, custom_labware_dict): # can i just simulate hardcode , custom_labware_dict
+    """Using the stock labware name from the csv, loads the appropiate labware from both 
+    a custom and the native libary and determines the maximum volume for one stock labware well. Assumes all labware is all identical."""
     protocol = simulate.get_protocol_api('2.0', extra_labware=custom_labware_dict) # encapsulated as only need an instance to simualte and toss
     stock_plate = protocol.load_labware(experiment_csv_dict['OT2 Stock Labwares'][0], experiment_csv_dict['OT2 Stock Labware Slots'][0])
     stock_plate_rows = [well for row in stock_plate.rows() for well in row]
     stock_plate_well_volume = stock_plate.__dict__['_well_definition']['A1']['totalLiquidVolume'] 
     return stock_plate_well_volume
+
 
 def stock_well_ranges(df, limit):
     """Given a dataframe of stocks volumes to pipette, will return the ranges of indexes for the volumes

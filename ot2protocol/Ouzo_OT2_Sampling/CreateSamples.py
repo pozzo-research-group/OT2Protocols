@@ -27,6 +27,9 @@ import csv
        - Work on looking at the flowthrough and how you would add geenralizations, what is currently constrained? What units can be come what units and what cannot be
        converted and how will effect/how will you need to change the functions you currently have? Are there specfic cases that one should avoid or are difficult to exper. 
        - Once you do this you will see how you will need to change the notation and names of vairables to unrestrict
+
+       go through and add quick explanation up here for her function 
+
     """
 
 def get_experiment_plan(filepath):
@@ -140,7 +143,6 @@ def generate_candidate_lattice_stocks(experiment_csv_dict): # work on trying to 
     return stock_concentration_array
 
 
-# Add volume catchers
 def prepare_stock_search(stock_canidates, experiment_csv_dict, wtf_sample_canidates, min_instrument_vol, max_instrument_vol):
     """
     Used to create a dictionary containing volume and fractional concnetration (currently only wtf and not volf notation wise) of sample canidates which are based on a groups of stock canidates. Also provides useful information in the stock_text_list entry like which stock combination was used and the number of samples possible with the specfic stock combination and concentration canidates. Essentially this runs through the process of creating a bunch of plausible cases given the single component canidates with the each of the previously created stock combination canidates. 
@@ -296,6 +298,7 @@ def calculate_ouzo_volumes_from_wtf(sample_conc_df, experiment_csv_dict, stock_s
     return stock_volumes_df # output in uL
 
 
+
 def total_volume_restriction_df(df, max_total_volume):
     column_names = df.columns
     total_column_name = [column_name for column_name in column_names if "Total Sample Volume" in column_name][0]
@@ -353,7 +356,6 @@ def ethanol_wtf_water_to_density(ethanol_wtf): # MOD
     fit = np.polyval(coeffs, ethanol_wtf)
     return fit
                 
-
 
 def calculate_stock_volumes(experiment_csv_dict, sample_volumes): # need to further generalize
     """Used to calculate stock volumes for a given experimental run"""
