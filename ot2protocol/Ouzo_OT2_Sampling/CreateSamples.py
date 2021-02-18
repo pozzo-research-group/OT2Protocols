@@ -45,6 +45,55 @@ def get_experiment_plan(filepath):
 
     return plan_dict
 
+def check_for_volume_unit(name):
+    """Calculate the dictionay which where key is unit string and key is the unit/L conversion, 
+    i.e. mL number base will be 1000."""
+    unit_dict = {' L':1, 'mL':1000, 'uL':1000000} # need to add space to prevent L picking up uL?
+    unit_dict_keys = unit_dict.keys()
+    
+    for unit in unit_dict_keys:
+        if unit in name:
+            return {unit:unit_dict[unit]}
+
+def convert_to_liter(df):
+    """Will convert any volume units in a dataframe to base of liter. 
+    Make sure no dtypes are mixed (i.e. not object). Units between columns in dataframe can be mixed."""
+    for name in df:
+        unit_dict = check_for_volume_unit(name)
+        unit = next(iter(unit_dict))
+        conversion_value = unit_dict[unit]
+        
+        new_name = name.replace(unit," L")
+        df[new_name] = df[name]/conversion_value
+        df.drop([name], axis=1, inplace = True)
+    return df
+
+def convert_volume_unit(df, unit):
+    # to convert we will multiply desired_conversion_value/current_conversion_value 
+    desired_unit = unit 
+    desired_unit_dict = check_for_volume_unit(desired_unit)
+    desired_conversion_value = desired_unit_dict[desired_unit]
+    
+    for name in df:
+        current_unit_dict = check_for_volume_unit(name)
+        current_unit = next(iter(current_unit_dict))
+        current_conversion_value = current_unit_dict[current_unit] # from liter
+        
+        new_name = name.replace(desired_unit,''+desired_unit)
+        df[new_name] = df[name]*(desired_conversion_value/current_conversion_value)
+        df.drop([name], axis=1, inplace = True)
+    return df
+        
+def check_unit_congruence(df):
+    """Ensures all units in a dataframe are the same. Useful when applying dataframe wide operations."""
+    cols = df.columns
+    units = []
+    for col in cols:
+        unit = check_for_volume_unit(col)
+        units.append(unit)
+    if all_same(units) == False:
+        raise AssertionError('All units of columns are not identical, please convert all units and associated names to equal units.')
+              
 def all_same(items):
     "Checks whether all elements are identical in type and value, using the initial entry as the basis of comparison"
     return all(x == items[0] for x in items)
@@ -437,7 +486,147 @@ def rearrange_2D_list(nth_list):
         list_rearranged.append(ith_of_each_sublist)
     return list_rearranged
 
+def stock_molarity(total_volume, concentration, solute_mw, solute_density, solvent_density):
+    """Calculates the mass of solutese and solvents for a stock solution with a given concentration given in terms of molarity.
+    Currently only binary mixtures, will generalize by making solute dtypes list. 
+    Volume = L, mw = g/mol, density = g/L."""
+    
+#     for solute_mw, solute_density, solute_conc # need to make conc a list argument
+    print(total_volume*1000)
+    solute_moles = concentration*total_volume # mol/L * L
+    solute_mass = solute_moles*solute_mw # mol*(g/mol)
+    
+    if solute_density == 'Negligible':
+        solute_volume = 0
+    else: 
+        solute_volume = solute_mass/solute_density # g/(g/L)
+    
+    solvent_volume = total_volume - solute_volume
+    solvent_mass = solvent_volume*solvent_density
+    
+    return {'solute mass g': solute_mass,
+           'solute volume L': solute_volume,
+           'solvent mass g': solvent_mass,
+           'solvent volume L': solvent_volume}    
 
+def stock_wtf(total_mass, solute_wtf, solvent_wtf, solute_density, solvent_density):
+    """Calculates the mass and volumes of solutes and solvents of stock solution with concentration in terms of wtf.
+    Currently only binary mixtures, will generalize by making solute information list.
+    Volume = L, mw = g/mol, density = g/L."""
+    solute_mass = total_mass*solute_wtf # in g
+    solvent_mass = total_mass*solvent_wtf
+    
+    solute_volume = solute_mass/solute_density # in L
+    solvent_volume = solvent_mass/solvent_density
+    
+    return {'solute mass g': solute_mass,
+           'solute volume L': solute_volume,
+           'solvent mass g': solvent_mass,
+           'solvent volume L': solvent_volume}
+
+def stock_mgperml(total_volume, solute_wtf, solvent_wtf, solute_density, solvent_density):
+    """Calculates the mass and volumes of solutes and solvents of stock solution with concentration in terms of mg/mL.
+    Currently only binary mixtures, will generalize by making solute information list.
+    Volume = L, mw = g/mol, density = g/L."""
+    pass
+
+def stock_volf(total_volume, solute_wtf, solvent_wtf, solute_density, solvent_density):
+    """Calculates the mass and volumes of solutes and solvents of stock solution with concentration in terms of volf.
+    Currently only binary mixtures, will generalize by making solute information list.
+    Volume = L, mw = g/mol, density = g/L."""
+    pass
+
+def stock_molf(total_volume, solute_wtf, solvent_wtf, solute_density, solvent_density):
+    """Calculates the mass and volumes of solutes and solvents of stock solution with concentration in terms of molf.
+    Currently only binary mixtures, will generalize by making solute information list.
+    Volume = L, mw = g/mol, density = g/L."""
+    pass
+    
+def bimixture_density_wtf(comp1_wtf, comp1_density, comp2_density):
+    """This is only to be used a very rough estimate if not density data is available for a binary mixture. 
+    The information is useful in cases when calculating mass estimate for wtf calculation, since you need to convert a 
+    total volume to mass, for purposes of stock making, which is compeltely valid since you just want to know roughly how much
+    stock to create."""
+    density = comp1_wtf*comp1_density + (1-comp1_wtf)*comp2_density
+    return density
+
+def stock_components(stock_name):
+    """The stock name is required to be in the form 'solute n-solvent-stock' where the entry prior to the keyword stock are solvent
+    and anything prior to that is assumed a solute. Will return a dictionary of the solvent and solute while pulling information from """
+    stock_components = stock_name.split('-')
+    stock_solutes = stock_components[:-2] # will always be a list
+    stock_solvents = stock_components[-2]
+    
+    return stock_solutes, stock_solvents
+
+
+def calculate_stock_prep_df(experiment_dict, volume_df, chem_database_path, buffer_pct = 10):
+    
+    # Isolate all stock volume entries in dataframe
+    cols = volume_df.columns
+    stock_cols = [col for col in cols if "stock" in col]
+    stock_df = volume_df.copy()[stock_cols]
+    
+    # Compound volumes and add buffer
+    stock_df.loc['Total Volume'] = stock_df.sum(numeric_only=True, axis=0)*(1+(buffer_pct/100))
+    prep_df = pd.DataFrame(stock_df.loc['Total Volume']).T
+    
+    # Ensure all unit are same then convet to liters for calculations, latter is not 100% necessary
+    check_unit_congruence(prep_df)
+    prep_df = convert_to_liter(prep_df)
+    
+    # Add the concentration and respective units (may have this be arguments instead since only would be +1)
+    prep_df.loc['Final Selected Stock Concentrations'] = experiment_dict['Final Selected Stock Concentrations']
+    prep_df.loc['Stock Concentration Units'] = experiment_dict['Stock Concentration Units']
+    
+    chem_database_df = pd.read_excel(chem_database_path)
+    
+    prep_dicts = {}
+    for stock in prep_df:
+        total_volume = prep_df[stock]['Total Volume']
+        stock_unit = prep_df[stock]['Stock Concentration Units']
+        stock_conc = prep_df[stock]['Final Selected Stock Concentrations']
+        solutes, solvent = stock_components(stock) # currently only one solvent and solute supported
+
+        #All stocks will obvi have a solvent, but the solute is optional
+        solvent_component_info = chem_database_df.loc[chem_database_df['Component Abbreviation'] == solvent]
+        solvent_density = solvent_component_info['Density (g/L)'].iloc[0]
+
+        if not solutes: # if no solutes present
+            solute_mass = 0
+            solute_volume = 0
+            solvent_volume = total_volume
+            solvent_mass = solvent_volume*solvent_density
+            prep_dict = {'solute mass g': solute_mass,
+               'solute volume L': solute_volume,
+               'solvent mass g': solvent_mass,
+               'solvent volume L': solvent_volume}
+
+        if solutes: 
+            solute = solutes[0]
+            solute_component_info = chem_database_df.loc[chem_database_df['Component Abbreviation'] == solute] # add assertion to ensure component in database
+
+            if stock_unit == 'molarity':
+                solute_mw = solute_component_info['Molecular Weight (g/mol)'].iloc[0] # only call info if needed, if common between units then pull up one level
+                solute_density = solute_component_info['Density (g/L)'].iloc[0]
+                prep_dict = stock_molarity(total_volume, stock_conc, solute_mw, solute_density, solvent_density)
+
+            if stock_unit == 'wtf':
+                # since no density data available at the moment need to rough estimate, does not matter since the mass is scaled according to wtf, so long as more.
+                solute_density = solute_component_info['Density (g/L)'].iloc[0]
+                density_mix = bimixture_density_wtf(stock_conc, solute_density, solvent_density)
+                total_mass = total_volume*density_mix
+                prep_dict = stock_wtf(total_mass, stock_conc, 1-stock_conc, solute_density, solvent_density)
+        prep_dicts[stock] = prep_dict
+    stock_prep_df = pd.DataFrame.from_dict(prep_dicts) # add total volumes
+    stock_complete_df = pd.concat([prep_df,stock_prep_df])
+    return stock_prep_df
+
+def isolate_common_column(df, common_string):
+    cols = df.columns
+    common_string_cols = [col for col in cols if common_string in col]
+    final_df = df.copy()[common_string_cols]
+    return final_df
 
 ################### FIX OR INTEGRATE ###########################################################
 

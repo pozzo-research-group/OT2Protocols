@@ -49,6 +49,17 @@ def object_to_object_list(protocol, stock_object_names, stock_object_slots):
    
     return labware_objects
 
+def rearrange_2D_list(nth_list):
+    """Rearranges information from a 2D_list of length m with entries of length n to an outer array of length n, with entries of length m. Each entry now holds the ith entry of original entry in a new entry.
+   [[a1,b1,c1],[a2,b2,c2]] => [[a1,a2],[b1,b2],[c1,c2]], making it easier to handle for cases like dataframes. 
+ 
+    """
+    list_rearranged = []
+    for i in range(len(nth_list[0])): 
+        ith_of_each_sublist = [sublist[i] for sublist in nth_list]
+        list_rearranged.append(ith_of_each_sublist)
+    return list_rearranged
+
 def find_max_dest_volume_labware(experiment_csv_dict, custom_labware_dict): # can i just simulate hardcode , custom_labware_dict
     """Using the stock labware name from the csv, loads the appropiate labware from both 
     a custom and the native libary and determines the maximum volume for one stock labware well. Assumes all labware is all identical."""
@@ -148,7 +159,7 @@ def loading_labware(protocol, experiment_dict):
     
     return loaded_labware_dict # even if there was a way to call from protocol object would need to rename all over aagin
 
-def pipette_stock_volumes(protocol, loaded_dict, stock_volumes, stock_ranges):
+def pipette_stock_volumes(protocol, loaded_dict, stock_volumes_df, stock_ranges):
     """ Given the protocol used to set up the loaded labware dict, along with the volumes to pipette will send transfer commands to the ot2.
     The volumes fed as a 2D list where each sublist is the the volumes for one stock. Ranges are fed similar """
     
@@ -167,6 +178,7 @@ def pipette_stock_volumes(protocol, loaded_dict, stock_volumes, stock_ranges):
         large_pipette = left_pipette
 
     ## function to check prior if volumes are inbetween .min/max_volume and pipettes are appropiate
+    stock_volumes = rearrange_2D_list(stock_volumes_df.values) # change so it grabs per column and not have to use this function
     info_list = []
     for stock_well_index, (stock_volume, stock_range) in enumerate(zip(stock_volumes, stock_ranges)): # each iteration is one stock position (one range = one stock position)
         complete_volumes_of_one_stock = stock_volume
@@ -482,4 +494,5 @@ def custom_or_native_labware(protocol, labware_name, labware_slot, custom_labwar
         loaded_labware = protocol.load_labware_from_definition(custom_labware_dict[labware_name], labware_slot)
     else: 
         loaded_labware = protocol.load_labware(labware_name, labware_slot)     
-    return loaded_labware
+        return loaded_labware
+

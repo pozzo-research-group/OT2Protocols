@@ -152,3 +152,29 @@ def plot_wavelengths_zoom(dataframe, labels, x_lim = [], y_lim = []):
     plt.ylabel('Absorbance')
     if len(y_lim) == 2:
         plt.ylim(y_lim)
+
+
+def xy_scatter_df(df, x_name, y_name):
+    """Plots two columns of a dataframe against each other on a 2D scatter plot"""
+    x = df[x_name]
+    y = df[y_name]
+    
+    fig, ax = plt.subplots(1)
+    ax.scatter(x, y, marker="+", c = 'black')
+    ax.set_xlabel(x_name)
+    ax.set_ylabel(y_name)
+    
+    
+def xy_scatter_df_compare(df1, df2, x_name, y_name):
+    """Plots two columns of a 2 dataframe against each other on a 2D scatter plot. Allows for a visual comparasion."""
+    x1 = df1[x_name]
+    y1 = df1[y_name]
+    
+    x2 = df2[x_name]
+    y2 = df2[y_name]
+    
+    fig, ax = plt.subplots(1)
+    ax.scatter(x1, y1, marker="s", alpha=0.4, c = 'orange')
+    ax.scatter(x2, y2, marker="+", c = 'black')
+    ax.set_xlabel(x_name)
+    ax.set_ylabel(y_name)
