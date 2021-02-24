@@ -103,20 +103,23 @@ def combine_df(df1,df2):
     return df3
 
 # also naming notation should more be "uniform" versus "lattice"
-def generate_candidate_lattice_concentrations(experiment_csv_dict, expose_df = False):
-    """Given the complete csv dictionary of instruction, uses the n component linspaces of equivalent concentration units which summmation equal one (i.e. volf or wtf). The number of linspaces used are to equal the total number of components - 1. Once a 2D list of component concentration candidates are generated the canidates (of length total # of components - 1) are subsequently filtered/completed by sample_sum_filter. All entry additions follow the order of linspaces from the experiment_csv_dict."""
+def generate_candidate_lattice_concentrations(experiment_csv_dict, unity_filter = False, expose_unfiltered_df = False):
+    """Given the complete csv dictionary of instruction, uses the n component linspaces of equivalent concentration units which summmation equal one (i.e. volf or wtf). 
+    The number of linspaces used are to equal the total number of components - 1. Once a 2D list of component concentration candidates are generated the canidates (of length total # of components - 1) are subsequently filtered/completed by sample_sum_filter. 
+    All entry additions follow the order of linspaces from the experiment_csv_dict."""
     
     component_units = experiment_csv_dict['Component Concentration Unit']
-    component_name_list = experiment_csv_dict['Component Shorthand Names']
-    component_conc_linspaces_list = experiment_csv_dict['Component Concentrations [min, max, n]']
+    component_names = experiment_csv_dict['Component Shorthand Names']
+    component_conc_linspaces = experiment_csv_dict['Component Concentrations [min, max, n]']
     component_spacing_type = experiment_csv_dict['Component Spacing']
 
-    assert len(component_units) == len(component_name_list), 'Number of component names not equal to number of provided units'
+    # Checks
+    assert len(component_units) == len(component_names), 'Number of component names not equal to number of provided units'
     assert all_same(component_units), 'Unit of components are not identical, currently all units must be identical.'    
-
+    
 
     conc_range_list = [] # will hold flattened linspaces (component spacing) of possible concentration for each component given the spacing method 
-    for conc_linspace in component_conc_linspaces_list:
+    for conc_linspace in component_conc_linspaces:
         if component_spacing_type == "linear": 
             conc_range_list.append(np.linspace(*conc_linspace))
         elif component_spacing_type == "random": # ensure space searching small enough or resoluiton high enough. 
@@ -129,37 +132,34 @@ def generate_candidate_lattice_concentrations(experiment_csv_dict, expose_df = F
 
     component_conc_dict = {} 
     for i in range(len(conc_grid)): 
-        component_name = component_name_list[i]
+        component_name = component_names[i]
         component_unit = component_units[i]
         component_conc_dict[component_name + " " + component_unit] = conc_grid[i].ravel()
     concentration_df = pd.DataFrame.from_dict(component_conc_dict)
 
-    # here is where one could incorperate different forms of completion for underspecfied components given a specfic unit case
-    # it might be wise to move this out into its own functions or group of different functions, hmmm could be good justification for moving to classes - the use of dataframe to me goes against this/  
-    if component_units[0] in ('wtf','volf','molf'): # complete using final entry in list of components
-        assert len(component_units) != len(component_conc_linspaces_list) - 1, 'Concentrations are either over- or under- defined' # this should only be the case of unity concentrations
-        completing_index = len(component_name_list)-1
-        completing_component_name = component_name_list[completing_index]
-        completing_component_unit = component_units[completing_index]
-        completing_entry_name = completing_component_name + " " + completing_component_unit
-        concentration_df[completing_entry_name] = (1 - concentration_df.sum(axis=1)) 
+    # Here is where we can incorperate different types of filters, such as this unity filter. 
+    if unity_filter == True: 
+        assert len(component_names) != len(component_conc_linspaces), "The provided experimental instructions are overspecified." # Add one for underspecified, perhaps should have these in their own functions as to quickly use in other processes 
+        if component_units[0] in ('wtf','volf','molf'):
+            assert len(component_units) != len(component_conc_linspaces) - 1, 'Concentrations are either over- or under- defined' 
         
-        unfiltered_concentration_df = concentration_df # used to catch errors when concentration_df after fully defined concentration produces no suitable canidates
-        concentration_df = concentration_df[concentration_df[completing_entry_name] > 0]
-        concentration_df.reset_index(drop=True, inplace=True)
+            completing_index = len(component_names)-1
+            completing_component_name = component_names[completing_index]
+            completing_component_unit = component_units[completing_index]
+            completing_entry_name = completing_component_name + " " + completing_component_unit
+            concentration_df[completing_entry_name] = (1 - concentration_df.sum(axis=1)) 
         
-        if expose_df == True:
-            return unfiltered_concentration_df
+            unfiltered_concentration_df = concentration_df # used to catch errors when concentration_df after fully defined concentration produces no suitable canidates
+            concentration_df = concentration_df[concentration_df[completing_entry_name] > 0]
+            concentration_df.reset_index(drop=True, inplace=True)
+        
+            if expose_unfiltered_df == True:
+                return unfiltered_concentration_df
 
-        assert not concentration_df.empty, 'No suitable samples were found, please change your concentration space. Most likely this means you have your linspaces set too close together at all high concentrations (close to 1) resulting in impossible samples (wtf/volf>1). Turn on expose_df to return unfiltered dataframe'
-    
-    # add elif for difference unit cases.
+            assert not concentration_df.empty, 'No suitable samples were found, please change your concentration space. Most likely this means you have your linspaces set too close together at all high concentrations (close to 1) resulting in impossible samples (wtf/volf>1). Turn on expose_df to return unfiltered dataframe'
         
-    else:
-        raise AssertionError("Component " + str(component_units[0]) + " unit not currently supported")
-
-    assert len(component_name_list) != len(component_conc_linspaces_list), "The provided experimental instructions are overspecified."
-    # concentration_array = concentration_df.values
+        else:
+            raise AssertionError("Component " + str(component_units[0]) + " unit not currently supported")
         
     return concentration_df
 
